@@ -2,6 +2,12 @@
 
 参考用户提供的视频重建的独立 WebGL 场景。使用静态 HTML、CSS、JavaScript 与 Three.js r160，无后端。
 
+## 分享与发布
+
+公开网站：https://li-design-lab.github.io/3d--/ 。请分享这个地址，不要分享 `127.0.0.1` 或旧的 `chatgpt.site` 地址。
+
+GitHub 的 `main` 更新后自动发布，只有 Actions 中 `Publish Blue Atlas` 成功后才表示上线。左上角“下钻版”后显示当前发布的提交短号；`release.json` 可查看完整版本。部署直接打包完整 `dist/client`，包含按需加载的边界和雷达资源，而非仅发布 Vite 的 JavaScript 包。源码仓库按用户授权改为公开。
+
 ## 功能
 - 中国地图挤出、边缘高亮、动态侧壁、透视网格与旋转光环。
 - 拖动旋转、滚轮缩放、放大、缩小、俯视、环绕、复位与全屏。
