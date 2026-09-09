@@ -1,0 +1,22 @@
+{
+  "product": "CREF",
+  "label": "组合反射率",
+  "unit": "dBZ",
+  "productTime": "2026-08-26 00:54–02:12",
+  "sourceFile": "DOR_RDCP_LATLON_02H_CREF_202608260054_202608260212.nc",
+  "bounds": {
+    "west": 73.0,
+    "south": 12.199999809265137,
+    "east": 135.0,
+    "north": 54.20000076293945
+  },
+  "threshold": 5,
+  "minDbz": 0.0,
+  "maxDbz": 44.39,
+  "echoPixelsAtOrAbove5Dbz": 590218,
+  "render": {
+    "projection": "Web Mercator",
+    "width": 2048,
+    "height": 1733
+  }
+}
