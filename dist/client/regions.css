@@ -1,0 +1,9 @@
+#region-nav{position:absolute;top:20px;left:24px;width:min(360px,calc(100vw - 320px));padding:14px;background:#081c2be8;border:1px solid #547d9666;border-radius:12px;backdrop-filter:blur(14px);z-index:1}
+#region-nav[hidden],.radar-panel[hidden]{display:none}
+#region-crumbs{font-size:14px;line-height:24px;color:#87aabe;overflow-wrap:anywhere}
+#region-crumbs button{border:0;background:transparent;color:#8bdcff;padding:0;font-size:14px}
+#region-crumbs strong{color:#e3f4ff;font-weight:500}
+#region-select{margin-top:9px;width:100%;min-height:34px;background:#0d2b42;color:#e1f4ff;border:1px solid #48718d;border-radius:6px;padding:5px 8px;font-size:14px}
+#region-status{color:#8baebe;font-size:12px;line-height:1.5;margin:9px 0 0}
+.back{top:170px;z-index:1}
+@media(max-width:700px){#region-nav{left:12px;top:12px;width:calc(100vw - 24px);max-width:360px}.radar-panel{display:none}.back{top:150px}}

@@ -6,6 +6,7 @@
   <title>数字地图 · 3D交互场景</title>
   <meta name="description" content="蓝色立体中国地图，支持真实雷达反射率、区域下钻、热力与飞线图层、地球视图和自由视角。">
   <link rel="stylesheet" href="style.css?v=loader-2">
+  <link rel="stylesheet" href="regions.css">
   <script type="importmap">{"imports":{"three":"./assets/three.module.js"}}</script>
 </head>
 <body>
@@ -13,6 +14,11 @@
   <div id="labels"></div>
   <div id="transition"></div>
   <button id="back" class="back" hidden>‹ 返回上一级</button>
+  <section id="region-nav" aria-label="行政区下钻导航">
+    <nav id="region-crumbs" aria-label="当前位置"></nav>
+    <select id="region-select" aria-label="选择下钻区域"></select>
+    <p id="region-status" role="status"></p>
+  </section>
 
   <div class="tools left" aria-label="数据图层">
     <div class="tools-caption">图层显示</div>
@@ -52,6 +58,6 @@
   <button id="fullscreen" title="全屏" aria-label="全屏"><svg class="control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></svg></button>
   <div id="loading"><div class="loader"></div><span>正在构建立体地图</span><button id="retry" hidden>重新加载</button></div>
   <div id="notice" role="status"></div>
-  <script type="module" src="app.js?v=loader-2"></script>
+  <script type="module" src="app.js?v=regions-4"></script>
 </body>
 </html>

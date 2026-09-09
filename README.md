@@ -5,7 +5,7 @@
 ## 功能
 - 中国地图挤出、边缘高亮、动态侧壁、透视网格与旋转光环。
 - 拖动旋转、滚轮缩放、放大、缩小、俯视、环绕、复位与全屏。
-- 省级下钻和返回；四川、江苏市级下钻数据随站点打包；其他市级在线请求失败时明确提示。
+- 全国 34 个省级区域可单独进入；支持省 → 市 → 区县、面包屑跳转和逐级返回，直辖市直接进入区县。边界按需从本地加载，不依赖运行时外网边界接口。
 - 飞线、事件标签、重点点位、热力图层与散点独立开关；除雷达外的点位仍为演示数据。
 - 已叠加一份真实雷达组合反射率（CREF）产品：2026-08-26 00:54–02:12，覆盖 73–135°E、12.2–54.2°N，最大 44.39 dBZ。图像采用 Web Mercator 重采样，与立体地图经纬度对齐。
 - 地球视图使用纹理球体、云层、辉光、城市标签与弧线。
@@ -13,13 +13,33 @@
 ## 素材与依赖
 - Three.js 0.160.1 和 OrbitControls：MIT，https://github.com/mrdoob/three.js
 - 地球贴图来自 Three.js examples/textures/planets：https://threejs.org/examples/
-- 地图边界来自阿里云 DataV GeoAtlas：https://datav.aliyun.com/portal/school/atlas/area_selector
+- 全国省界使用用户提供的《中国_省.geojson》（34 个省级面、8 组境界线，原文件标注 EPSG:4490，经纬度坐标保持不变）。市、区县边界来自既有素材及阿里云 DataV GeoAtlas：https://datav.aliyun.com/portal/school/atlas/area_selector 。边界版本未统一核定，不用于法定界线认定。
 - 视觉参考为用户提供的 55 秒演示视频。没有使用原案例源码或从视频截图充当界面。
 
 ## 当前边界
 为视觉与交互的第一版重建，并非原项目的逐像素复制。材质、光晕与镜头路径为重新实现。视频未展示的业务行为未添加。
 
-通过 HTTP 静态服务提供 dist 目录即可运行。
+在本项目目录运行 `npm install`、`npm run dev`，打开 http://127.0.0.1:5174/ 。也可通过 HTTP 静态服务提供 `dist/client` 目录，不能直接双击 HTML。
+
+## 行政区数据与已知限制
+
+- 当前索引包含 363 份区域视图，数据位于 `dist/client/assets/regions/manifest.json`。每次只加载当前区域；失败后保留原地图，可重试。
+- 台湾省可单独查看，但当前来源没有下级边界；其他省级区域已打包现有下级边界。直辖市及省直辖县级区按数据实际层级导航。
+- **尚未提供乡镇面边界。** 区县可进入独立视图，再往下会明确显示“暂缺乡镇边界”，不会用模拟多边形冒充乡镇。
+- 若补充某区县的乡镇边界，将包含该县全部乡镇的 FeatureCollection 存为 `dist/client/assets/<区县行政代码>.json`。每个乡镇须有唯一的 `properties.adcode`、`properties.name`、`properties.level: "town"` 及真实经纬度 Polygon/MultiPolygon；重新生成索引即可继续下钻。
+- 雷达保持原产品经纬度位置，并按当前区域轮廓裁切；下钻不会生成更高分辨率雷达数据，无回波区域允许为空。
+
+更新省界与索引（不联网）：
+
+```bash
+node scripts/prepare-regions.mjs /path/to/中国_省.geojson
+```
+
+增加 `--fetch-cities` 可尝试补齐缺失的省、市子级集合。不会自动生成乡镇数据。
+
+回归检查：`node --test scripts/regions.test.mjs`、`npm run build`。
+
+2026-09-09 本地浏览器实测：34 个省级入口逐一进入并返回；四川 → 成都 → 锦江区链路通过。此验证不代表旧 chatgpt.site 公网链接恢复。
 
 ## 雷达数据更新
 

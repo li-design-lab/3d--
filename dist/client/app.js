@@ -5,7 +5,9 @@ import {RenderPass} from './assets/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from './assets/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from './assets/postprocessing/OutputPass.js';
 import {createGlobeShell} from './globe-shell.js';
+import {createRegionStore, readJson} from './region-data.js';
 const $=s=>document.querySelector(s),TAU=Math.PI*2;
+let regionStore=null, activeData=null;
 const state={view:'china',radar:true,fly:true,event:true,point:true,heat:false,scatter:true,aura:true,code:'100000',name:'中国',history:[],busy:false};
 const root=$('#scene'), labelRoot=$('#labels');
 let renderer;
@@ -51,7 +53,7 @@ function merc(c){return [c[0],Math.log(Math.tan(Math.PI/4+c[1]*Math.PI/360))*180
 function makeProjection(data){let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;for(const f of data.features){if(!f.geometry||f.properties.adcode==='100000_JD')continue;const polys=f.geometry.type==='MultiPolygon'?f.geometry.coordinates:[f.geometry.coordinates];for(const poly of polys)for(const c of poly[0]){if(state.code==='100000'&&c[1]<18)continue;const [x,y]=merc(c);minX=Math.min(x,minX);maxX=Math.max(x,maxX);minY=Math.min(y,minY);maxY=Math.max(y,maxY);}}
 const scale=Math.min(108/(maxX-minX),80/(maxY-minY));return c=>{let [x,y]=merc(c);return [(x-(minX+maxX)/2)*scale,(y-(minY+maxY)/2)*scale];};}
 function labelPosition(coord,y=3.82){const p=project(coord);return v(p[0],y,-p[1]);}
-function buildMap(data){clean(land);clean(fx);mapLabels.forEach(l=>l.el.remove());mapLabels=[];pickables=[];pulses=[];flyDots=[];heatMats=[];timeMats=[];animatedObjects=[];topMats=[];hovered=null;project=makeProjection(data);const side=sideMat.clone();timeMats.push(side);
+function buildMap(data){activeData=data;clean(land);clean(fx);mapLabels.forEach(l=>l.el.remove());mapLabels=[];pickables=[];pulses=[];flyDots=[];heatMats=[];timeMats=[];animatedObjects=[];topMats=[];hovered=null;project=makeProjection(data);const side=sideMat.clone();timeMats.push(side);
 for(const feature of data.features){const {geometry,properties}=feature;if(!geometry)continue;const polys=geometry.type==='MultiPolygon'?geometry.coordinates:[geometry.coordinates];const top=topMaterial();const region=new THREE.Group();region.userData.feature=feature;
 for(const poly of polys){if(!poly[0]?.length)continue;const pts=poly[0].map(project);const shape=new THREE.Shape(pts.map(p=>new THREE.Vector2(...p)));for(const hole of poly.slice(1))shape.holes.push(new THREE.Path(hole.map(project).map(p=>new THREE.Vector2(...p))));const geo=new THREE.ExtrudeGeometry(shape,{depth:3.6,bevelEnabled:false,steps:1,curveSegments:1});const mesh=new THREE.Mesh(geo,[top,side]);mesh.rotation.x=-Math.PI/2;mesh.userData={feature,region,top};region.add(mesh);if(properties.name)pickables.push(mesh);
 for(const ring of poly){const p=ring.map(project);const edge=line(p.map(([x,y])=>v(x,3.63,-y)),'#c4e7ff',.58);region.add(edge);const bottom=line(p.map(([x,y])=>v(x,.06,-y)),'#248ec9',.45);region.add(bottom);}}
@@ -60,13 +62,33 @@ buildLandMask(data);
 addLabel(state.name+'<small>'+ (state.code==='100000'?'CHINA':'')+'</small>',v(0,-1.4,49),'title',mapWorld,mapLabels,true);
 for(const [text,pos] of [['N',v(0,-2,-60)],['S',v(0,-2,63)],['W',v(-75,-2,0)],['E',v(75,-2,0)]])addLabel(text,pos,'direction');
 if(state.code==='100000')for(const [text,x,z] of [['蒙古',0,-29],['朝鲜',42,-10],['日本',64,0],['印度',-49,21],['缅甸',-20,37],['老挝',-7,43]])addLabel(text,v(x,.1,z),'country');
-setupEffects(data);transitionStart=performance.now();$('#back').hidden=!state.history.length;}
+for(const f of data.boundaryLines||[]){const lines=f.geometry.type==='MultiLineString'?f.geometry.coordinates:[f.geometry.coordinates];for(const coords of lines)land.add(line(coords.map(c=>labelPosition(c,3.65)),'#8ccfff',.6));}
+setupEffects(data);transitionStart=performance.now();$('#back').hidden=!state.history.length;$('#tooltip').hidden=true;renderNavigation();}
 function buildLandMask(data){landMask?.dispose();const c=document.createElement('canvas');c.width=c.height=2048;const ctx=c.getContext('2d');ctx.fillStyle='white';for(const f of data.features){if(!f.properties.name)continue;const polys=f.geometry.type==='MultiPolygon'?f.geometry.coordinates:[f.geometry.coordinates];for(const poly of polys){ctx.beginPath();for(const ring of poly){ring.forEach((coord,i)=>{const p=project(coord),x=(p[0]+80)/160*2048,y=(80-p[1])/160*2048;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.closePath();}ctx.fill('evenodd');}}landMask=new THREE.CanvasTexture(c);}
 function glowDisc(pos,color,radius=2){const material=new THREE.ShaderMaterial({uniforms:{color:{value:new THREE.Color(color).multiplyScalar(1.8)}},transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,vertexShader:`varying vec2 u;void main(){u=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`uniform vec3 color;varying vec2 u;void main(){float d=length(u-.5)*2.;gl_FragColor=vec4(color,pow(max(0.,1.-d),3.)*.7);}`});const m=new THREE.Mesh(new THREE.PlaneGeometry(radius*5,radius*5),material);m.rotation.x=-Math.PI/2;m.position.copy(pos);fx.add(m);return m;}
 function ringAt(pos,color,radius=1){const group=new THREE.Group();group.position.copy(pos);for(let i=0;i<3;i++){const r=arc(radius,0,TAU,.08,color,1);r.material.color.multiplyScalar(2.5);r.position.y=.06;r.userData.phase=i/3;group.add(r);pulses.push(r);}const fixed=arc(radius*.65,0,TAU,.14,color,1);fixed.material.color.multiplyScalar(2.);fixed.position.y=.1;group.add(fixed);fx.add(group);return group;}
 function beam(pos,color,height=10){const g=new THREE.Group();g.position.copy(pos);const mat=new THREE.ShaderMaterial({uniforms:{color:{value:new THREE.Color(color).multiplyScalar(3.)}},transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,vertexShader:`varying vec2 u;void main(){u=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`uniform vec3 color;varying vec2 u;void main(){float core=pow(max(0.,1.-abs(u.x-.5)*2.),8.);float a=core*pow(1.-u.y,.75);gl_FragColor=vec4(color,a*.9);}`});for(let i=0;i<2;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1.8,height),mat);m.position.y=height/2;m.rotation.y=i*Math.PI/2;g.add(m);}fx.add(g);return g;}
 let layerGroups={};
-function addRadarOverlay(){if(state.code!=='100000'||!project)return;const [west,south,east,north]=radarProduct.bounds;const lowerLeft=project([west,south]),upperRight=project([east,north]);const width=upperRight[0]-lowerLeft[0],height=upperRight[1]-lowerLeft[1],x=(lowerLeft[0]+upperRight[0])/2,z=-(lowerLeft[1]+upperRight[1])/2;if(!radarTexture){radarTexture=new THREE.TextureLoader().load(radarProduct.url);radarTexture.colorSpace=THREE.SRGBColorSpace;radarTexture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);}const halo=new THREE.Mesh(new THREE.PlaneGeometry(width*1.008,height*1.008),new THREE.MeshBasicMaterial({map:radarTexture,transparent:true,opacity:.18,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));halo.rotation.x=-Math.PI/2;halo.position.set(x,3.735,z);const field=new THREE.Mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshBasicMaterial({map:radarTexture,transparent:true,opacity:.93,depthWrite:false,side:THREE.DoubleSide}));field.rotation.x=-Math.PI/2;field.position.set(x,3.775,z);const edge=line([v(lowerLeft[0],3.79,-lowerLeft[1]),v(upperRight[0],3.79,-lowerLeft[1]),v(upperRight[0],3.79,-upperRight[1]),v(lowerLeft[0],3.79,-upperRight[1]),v(lowerLeft[0],3.79,-lowerLeft[1])],'#62d8ff',.20);fx.add(halo,field,edge);layerGroups.radar.push(halo,field,edge);}
+function addRadarOverlay(){
+  if(!project)return;
+  const [west,south,east,north]=radarProduct.bounds,sw=project([west,south]),ne=project([east,north]);
+  if(!radarTexture){radarTexture=new THREE.TextureLoader().load(radarProduct.url,undefined,undefined,()=>notice('雷达影像加载失败，行政地图仍可使用'));radarTexture.colorSpace=THREE.SRGBColorSpace;radarTexture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);}
+  const material=new THREE.ShaderMaterial({
+    uniforms:{radar:{value:radarTexture},mask:{value:landMask},southwest:{value:new THREE.Vector2(...sw)},extent:{value:new THREE.Vector2(ne[0]-sw[0],ne[1]-sw[1])}},
+    transparent:true,depthWrite:false,side:THREE.DoubleSide,
+    vertexShader:'varying vec2 u;void main(){u=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:`uniform sampler2D radar;uniform sampler2D mask;uniform vec2 southwest;uniform vec2 extent;varying vec2 u;
+    void main(){vec2 xy=(u-.5)*160.;vec2 q=(xy-southwest)/extent;
+    if(any(lessThan(q,vec2(0.)))||any(greaterThan(q,vec2(1.))))discard;
+    float coverage=texture2D(mask,u).a;if(coverage<.05)discard;
+    gl_FragColor=texture2D(radar,q);gl_FragColor.a*=coverage*.95;
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    }`
+  });
+  const field=new THREE.Mesh(new THREE.PlaneGeometry(160,160),material);
+  field.rotation.x=-Math.PI/2;field.position.y=3.78;fx.add(field);layerGroups.radar.push(field);
+}
 function setupEffects(data){layerGroups={radar:[],fly:[],event:[],point:[],heat:[],scatter:[]};addRadarOverlay();const national=state.code==='100000';const centers=data.features.filter(f=>f.properties.center||f.properties.centroid).map(f=>f.properties.centroid||f.properties.center);
 const events=national?[[91,33],[96,32],[122,46],[132,45]]:centers.slice(0,4);
 events.forEach((coord,i)=>{const p=labelPosition(coord,3.85),color=i<2?'#ff8cda':'#7dffe4';const beamObject=beam(p,color,4.5);const ring=ringAt(p,color,.75);const disc=glowDisc(p,color,1.4);layerGroups.event.push(beamObject,ring,disc);const diamond=new THREE.Mesh(new THREE.OctahedronGeometry(.9),new THREE.MeshPhongMaterial({color,emissive:new THREE.Color(color).multiplyScalar(.8),shininess:80,transparent:true,opacity:.88}));diamond.scale.y=1.4;diamond.position.copy(p).add(v(0,3.8,0));fx.add(diamond);animatedObjects.push({object:diamond,y:diamond.position.y,phase:i});layerGroups.event.push(diamond);const label=addLabel('告警点#'+(i+1),p.clone().add(v(-.5,6.4,0)),'event '+(i<2?'pink':''));label.layer='event';});
@@ -78,14 +100,48 @@ const hot=national?[[87,46,6,.97],[91,34,5,.45],[92,28,6,.69],[99,29,5.5,.73],[1
 hot.forEach(([lon,lat,r,strength])=>{const p=labelPosition([lon,lat],3.78);const mat=new THREE.ShaderMaterial({uniforms:{mask:{value:landMask},center:{value:new THREE.Vector2(p.x,-p.z)},radius:{value:r},strength:{value:strength}},transparent:true,depthWrite:false,side:THREE.DoubleSide,vertexShader:`varying vec2 u;uniform float radius;uniform float strength;void main(){u=uv;vec3 p=position;float d=length((u-.5)*2.);p.z+=exp(-d*d*5.)*radius*.45*strength;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,fragmentShader:`varying vec2 u;uniform sampler2D mask;uniform vec2 center;uniform float radius;uniform float strength;void main(){vec2 xy=center+(u-.5)*radius*2.;if(texture2D(mask,(xy+80.)/160.).a<.5)discard;float d=length((u-.5)*2.);float a=exp(-d*d*3.5)*strength;vec3 c=mix(vec3(.0,.28,.20),vec3(.08,.95,.005),smoothstep(.12,.3,a));c=mix(c,vec3(1.,.96,.003),smoothstep(.45,.65,a));c=mix(c,vec3(1.,.015,.001),smoothstep(.83,.98,a));float alpha=(1.-smoothstep(.75,1.,d))*.94;gl_FragColor=vec4(c,alpha);}`});const hm=new THREE.Mesh(new THREE.PlaneGeometry(r*2,r*2,36,36),mat);hm.rotation.x=-Math.PI/2;hm.position.copy(p);fx.add(hm);layerGroups.heat.push(hm);});
 for(const f of data.features){const c=f.properties.center||f.properties.centroid;if(!c)continue;const p=labelPosition(c,3.88),mat=new THREE.MeshBasicMaterial({color:new THREE.Color('#4affe0').multiplyScalar(2.2)});const d=new THREE.Mesh(new THREE.SphereGeometry(.13,8,8),mat);d.position.copy(p);fx.add(d);layerGroups.scatter.push(d,glowDisc(p,'#47ffdf',.42));}
 applyLayers();}
-function applyLayers(){const groups=state.view==='earth'?globeLayers:layerGroups;for(const [k,objects] of Object.entries(groups))objects.forEach(o=>o.visible=state[k]);document.querySelectorAll('[data-layer]').forEach(b=>{const active=state[b.dataset.layer];b.classList.toggle('active',active);b.setAttribute('aria-pressed',active);b.disabled=switching;});}
-const cache=new Map(),dataApi='https://geo.datav.aliyun.com/areas_v3/bound/';
-async function fetchJson(url,timeout=12000){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);try{const response=await fetch(url,{signal:controller.signal,cache:'force-cache'});if(!response.ok||!response.headers.get('content-type')?.includes('json'))throw Error('资源不可用');return await response.json();}finally{clearTimeout(timer);}}
-async function getData(code){if(cache.has(code))return cache.get(code);const sources=[dataApi+code+'_full.json','./assets/'+code+'.json'];let failure;for(const source of sources){try{const data=await fetchJson(source);if(!data.features?.length)throw Error('暂无下级地图');cache.set(code,data);return data;}catch(error){failure=error;}}throw failure||Error('地图数据暂不可用');}
+function applyLayers(){const groups=state.view==='earth'?globeLayers:layerGroups;for(const [k,objects] of Object.entries(groups))objects.forEach(o=>o.visible=state[k]);document.querySelectorAll('[data-layer]').forEach(b=>{const active=state[b.dataset.layer];b.classList.toggle('active',active);b.setAttribute('aria-pressed',active);b.disabled=switching;});if(activeData)renderNavigation();}
+async function getData(code){return regionStore.get(code);}
 function tweenCamera(pos,duration=1100,done=null){cameraTween={from:camera.position.clone(),to:pos,start:performance.now(),duration,done};}
 function home(){controls.target.set(state.view==='china'?2:0,state.view==='china'?-6:0,0);tweenCamera((state.view==='earth'?v(0,20,150):v(0,89,112)).multiplyScalar(Math.max(1,1.45/camera.aspect)));controls.autoRotate=false;$('#orbit').classList.remove('active');$('#orbit').setAttribute('aria-pressed','false');}
-async function drill(feature){if(state.busy)return;const props=feature.properties,code=String(props.adcode);if(!props.childrenNum&&props.level==='district'){notice(props.name+' · 当前已到最细展示层级');return;}state.busy=true;notice('正在进入'+props.name);try{const data=await getData(code);state.history.push({code:state.code,name:state.name});state.code=code;state.name=props.name;buildMap(data);home();$('#notice').style.opacity=0;}catch(e){notice('该区域下级地图暂不可用，请选择其他区域');}finally{state.busy=false;}}
-$('#back').onclick=async()=>{if(state.busy||!state.history.length)return;state.busy=true;const previous=state.history[state.history.length-1];try{const d=await getData(previous.code);state.history.pop();Object.assign(state,previous);buildMap(d);home();}catch{notice('返回失败，请重试');}finally{state.busy=false;}};
+async function drill(feature){
+  if(state.busy||switching)return;
+  const props=feature.properties,code=String(props.adcode);
+  if(code===state.code){notice(props.level==='town'?'已到乡镇层级':'该区域暂缺下级边界数据');return;}
+  const previous={code:state.code,name:state.name,data:activeData,detail:state.detail};
+  state.busy=true;renderNavigation();notice('正在进入'+props.name);
+  try {
+    const hasChildren=regionStore.has(code);
+    const data=hasChildren?await getData(code):{type:'FeatureCollection',features:[feature]};
+    state.history.push(previous);state.code=code;state.name=props.name;state.detail=!hasChildren;
+    try{buildMap(data);home();}catch(error){state.history.pop();Object.assign(state,previous);buildMap(previous.data);throw error;}
+    $('#notice').style.opacity=0;
+  }catch(error){notice('边界加载失败，已保留当前地图，请重试');console.error(error);}
+  finally{state.busy=false;renderNavigation();}
+}
+function returnTo(index){
+  if(state.busy||switching)return;
+  const target=state.history[index];if(!target)return;
+  const oldHistory=[...state.history],oldState={code:state.code,name:state.name,data:activeData,detail:state.detail};
+  state.busy=true;
+  try{state.history=state.history.slice(0,index);state.code=target.code;state.name=target.name;state.detail=target.detail;buildMap(target.data);home();}
+  catch(error){state.history=oldHistory;Object.assign(state,oldState);buildMap(oldState.data);notice('返回失败，已保留当前地图');}
+  finally{state.busy=false;renderNavigation();}
+}
+$('#back').onclick=()=>returnTo(state.history.length-1);
+function renderNavigation(){
+  $('#region-nav').hidden=state.view!=='china';
+  const crumbs=$('#region-crumbs');crumbs.replaceChildren();
+  state.history.forEach((item,index)=>{const button=document.createElement('button');button.textContent=item.name;button.disabled=state.busy||switching;button.onclick=()=>returnTo(index);crumbs.append(button,document.createTextNode(' / '));});
+  const current=document.createElement('strong');current.textContent=state.name;crumbs.append(current);
+  const select=$('#region-select');select.replaceChildren(new Option('选择区域进入…',''));
+  for(const f of activeData?.features||[]){if(String(f.properties.adcode)===state.code)continue;select.add(new Option(f.properties.name,String(f.properties.adcode)));}
+  select.disabled=state.busy||switching||select.options.length===1;
+  $('#region-status').textContent=state.busy?'正在加载边界…':state.detail?(activeData.features[0].properties.level==='town'?'已到乡镇层级':activeData.features[0].properties.level==='district'?'当前区县 · 暂缺乡镇边界':'当前区域 · 暂缺下级边界'):state.code==='100000'?'34 个省级区域 · 使用提供的省界':activeData.features.length+' 个下级区域 · 点击地图或选择区域';
+  $('.radar-panel').hidden=state.view!=='china'||!state.radar;
+}
+$('#region-select').onchange=e=>{const f=activeData.features.find(f=>String(f.properties.adcode)===e.target.value);if(f)drill(f);};
+
 function makeGlobe(){const loader=new THREE.TextureLoader();const texture=loader.load('./assets/earth.jpg');texture.colorSpace=THREE.SRGBColorSpace;const normal=loader.load('./assets/bump.jpg');const sphere=new THREE.Mesh(new THREE.SphereGeometry(30,128,80),new THREE.MeshPhongMaterial({map:texture,color:'#a7c8ed',normalMap:normal,normalScale:new THREE.Vector2(.22,.22),shininess:20,specular:new THREE.Color('#366ea9')}));earth.add(sphere);
 const cloudTex=loader.load('./assets/clouds.png');const cloud=new THREE.Mesh(new THREE.SphereGeometry(30.24,96,64),new THREE.MeshPhongMaterial({map:cloudTex,transparent:true,opacity:.48,depthWrite:false,blending:THREE.AdditiveBlending}));earth.add(cloud);earth.userData.cloud=cloud;
 for(const [radius,power,opacity] of [[30.5,4.,.9],[32,4.5,.38],[35,5.,.12]]){const atmosphere=new THREE.Mesh(new THREE.SphereGeometry(radius,96,64),new THREE.ShaderMaterial({uniforms:{power:{value:power},opacity:{value:opacity}},transparent:true,side:THREE.BackSide,depthWrite:false,blending:THREE.AdditiveBlending,vertexShader:`varying vec3 n;varying vec3 e;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);n=normalize(normalMatrix*normal);e=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`,fragmentShader:`uniform float power;uniform float opacity;varying vec3 n;varying vec3 e;void main(){float rim=pow(max(0.,1.-abs(dot(n,e))),power);gl_FragColor=vec4(.02,.55,1.5,rim*opacity);}`}));earth.add(atmosphere);}
@@ -106,7 +162,7 @@ function activateView(mode){state.view=mode;if(mode==='earth')earth.userData.she
 let switching=false;
 function switchView(mode){if(mode===state.view||switching||state.busy)return;switching=true;document.querySelectorAll('button').forEach(b=>b.disabled=true);controls.enabled=false;controls.autoRotate=false;$('#orbit').classList.remove('active');$('#orbit').setAttribute('aria-pressed','false');$('#transition').style.opacity='1';
 const outward=mode==='earth'?camera.position.clone().normalize().multiplyScalar(205):camera.position.clone().normalize().multiplyScalar(48);
-tweenCamera(outward,850,()=>{activateView(mode);controls.target.set(mode==='china'?2:0,mode==='china'?-6:0,0);const fit=Math.max(1,1.45/camera.aspect);camera.position.copy((mode==='earth'?v(0,9,63):v(0,149,189)).multiplyScalar(fit));$('#transition').style.opacity='0';const destination=(mode==='earth'?v(0,20,150):v(0,89,112)).multiplyScalar(fit);tweenCamera(destination,1650,()=>{switching=false;document.querySelectorAll('button').forEach(b=>b.disabled=false);controls.enabled=true;});});}
+tweenCamera(outward,850,()=>{activateView(mode);controls.target.set(mode==='china'?2:0,mode==='china'?-6:0,0);const fit=Math.max(1,1.45/camera.aspect);camera.position.copy((mode==='earth'?v(0,9,63):v(0,149,189)).multiplyScalar(fit));$('#transition').style.opacity='0';const destination=(mode==='earth'?v(0,20,150):v(0,89,112)).multiplyScalar(fit);tweenCamera(destination,1650,()=>{switching=false;document.querySelectorAll('button').forEach(b=>b.disabled=false);controls.enabled=true;renderNavigation();});});}
 function updateToolbar(){$('.hint').textContent=state.view==='earth'?'拖动旋转 · 滚轮缩放':'拖动旋转 · 滚轮缩放 · 点击区域下钻';const mapNames={radar:'雷达回波',fly:'柱子飞线',event:'事件标签',point:'重点点位',heat:'模拟热力',scatter:'地图散点',aura:'粒子光环'},earthNames={radar:'雷达回波',fly:'飞线',event:'标签',point:'柱状图',heat:'陆运线',scatter:'海航线',aura:'粒子光环'};document.querySelectorAll('[data-layer]').forEach(b=>{b.querySelector('.control-label').textContent=(state.view==='earth'?earthNames:mapNames)[b.dataset.layer];b.hidden=(b.dataset.layer==='aura'&&state.view==='china')||(b.dataset.layer==='radar'&&state.view==='earth');});}
 document.querySelectorAll('[data-layer]').forEach(b=>b.onclick=()=>{state[b.dataset.layer]=!state[b.dataset.layer];applyLayers();});document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
 $('#in').onclick=()=>tweenCamera(camera.position.clone().multiplyScalar(.82),400);$('#out').onclick=()=>tweenCamera(camera.position.clone().multiplyScalar(1.2),400);$('#top').onclick=()=>tweenCamera(v(0,145,.1).multiplyScalar(Math.max(1,1.45/camera.aspect)));$('#reset').onclick=home;$('#orbit').onclick=()=>{controls.autoRotate=!controls.autoRotate;$('#orbit').classList.toggle('active',controls.autoRotate);$('#orbit').setAttribute('aria-pressed',controls.autoRotate);};$('#fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{notice('请使用浏览器的全屏模式');}};
@@ -117,4 +173,9 @@ addEventListener('resize',()=>{const oldFit=Math.max(1,1.45/camera.aspect);camer
 function updateLabels(list,visible){for(const l of list){let show=visible&&(!l.layer||state[l.layer]);if(show){temp.copy(l.pos);l.parent.localToWorld(temp);if(l.surface){const center=l.parent.getWorldPosition(new THREE.Vector3());show=temp.clone().sub(center).dot(camera.position.clone().sub(temp))>0;}temp.project(camera);show=show&&temp.z<1&&Math.abs(temp.x)<1.2&&Math.abs(temp.y)<1.2;if(show){l.el.style.left=(temp.x*.5+.5)*innerWidth+'px';l.el.style.top=(-temp.y*.5+.5)*innerHeight+'px';}}
 l.el.style.display=show?'block':'none';}}
 const clock=new THREE.Clock();function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime(),now=performance.now();if(cameraTween){const a=Math.min(1,(now-cameraTween.start)/cameraTween.duration),e=1-Math.pow(1-a,3);camera.position.lerpVectors(cameraTween.from,cameraTween.to,e);if(a===1){const done=cameraTween.done;cameraTween=null;done?.();}}controls.update();rings.forEach((g,i)=>g.rotation.y=t*(i%2?-.035:.06));particles.rotation.y=t*.005;streaks.forEach((l,i)=>l.material.opacity=.08+.22*(.5+.5*Math.sin(t*.8+i)));timeMats.forEach(m=>m.uniforms.t.value=t);pulses.forEach((r,i)=>{const phase=(t*.5+r.userData.phase)%1;r.scale.setScalar(.6+phase*1.5);r.material.opacity=(1-phase)*.75;});animatedObjects.forEach(({object,y,phase,rotate})=>{if(rotate)object.rotation.y=t*.22;else{object.position.y=y+Math.sin(t*1.7+phase)*.3;object.rotation.y=t*.35;}});flyDots.forEach(({dot,curve,offset})=>dot.position.copy(curve.getPoint((t*.17+offset)%1)));if(globeWorld.visible){earth.rotation.y+=.0002;earth.userData.cloud.rotation.y+=.00016;earth.userData.shell.update(now/1000);earth.userData.travellers.forEach(({object,curve,phase})=>object.position.copy(curve.getPoint((t*.07+phase)%1)));}const reveal=Math.min(1,(now-transitionStart)/900);land.scale.y=.12+.88*(1-Math.pow(1-reveal,3));updateLabels(mapLabels,mapWorld.visible);updateLabels(earthLabels,globeWorld.visible);composer.render();}
-$('#retry').onclick=()=>location.reload();try{const data=await getData('100000');chinaData=data;buildMap(data);makeGlobe();updateToolbar();animate();$('#loading').style.opacity=0;setTimeout(()=>$('#loading').remove(),650);}catch(e){$('#loading span').textContent='地图数据加载失败，请检查网络后重试';$('#retry').hidden=false;console.error(e);}
+$('#retry').onclick=()=>location.reload();
+try{
+  regionStore=createRegionStore(await readJson('./assets/regions/manifest.json'));
+  const data=await getData('100000');chinaData=data;buildMap(data);makeGlobe();updateToolbar();animate();
+  $('#loading').style.opacity=0;setTimeout(()=>$('#loading').remove(),650);
+}catch(e){$('#loading span').textContent='地图加载失败，请重新加载';$('#loading .loader').style.display='none';$('#retry').hidden=false;console.error(e);}
