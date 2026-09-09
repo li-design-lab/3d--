@@ -2,10 +2,10 @@ import { defineConfig } from 'vite';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
-  root: 'dist',
+  root: 'dist/client',
   resolve: {
     alias: {
-      three: fileURLToPath(new URL('./dist/assets/three.module.js', import.meta.url)),
+      three: fileURLToPath(new URL('./dist/client/assets/three.module.js', import.meta.url)),
     },
   },
   server: {
@@ -16,5 +16,6 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
+    outDir: '../build',
   },
 });
