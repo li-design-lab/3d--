@@ -1,4 +1,4 @@
-# 蓝色立体地图 · 交互还原
+# 蓝色 3D 地图（Blue Atlas 3D）
 
 参考用户提供的视频重建的独立 WebGL 场景。使用静态 HTML、CSS、JavaScript 与 Three.js r160，无后端。
 
