@@ -6,7 +6,7 @@
 
 公开网站：https://li-design-lab.github.io/3d--/ 。请分享这个地址，不要分享 `127.0.0.1` 或旧的 `chatgpt.site` 地址。
 
-GitHub 的 `main` 更新后自动发布，只有 Actions 中 `Publish Blue Atlas` 成功后才表示上线。左上角“下钻版”后显示当前发布的提交短号；`release.json` 可查看完整版本。部署直接打包完整 `dist/client`，包含按需加载的边界和雷达资源，而非仅发布 Vite 的 JavaScript 包。源码仓库按用户授权改为公开。
+源码在 `main`，网站从独立 `gh-pages` 分支发布。仅更新 `main` 不会自动上线，需运行 `node scripts/prepare-pages.mjs`，将生成的完整静态目录同步到 `gh-pages` 并等待 Pages 发布成功。当前 GitHub 凭证不能写入 Actions 工作流，因此使用分支发布，不扩大凭证权限。左上角“下钻版”后显示当前发布的源码提交短号；`release.json` 可查看完整版本。部署包含按需加载的边界和雷达资源，而非仅发布 Vite 的 JavaScript 包。源码仓库按用户授权改为公开。
 
 ## 功能
 - 中国地图挤出、边缘高亮、动态侧壁、透视网格与旋转光环。
