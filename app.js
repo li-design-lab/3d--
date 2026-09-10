@@ -1,0 +1,181 @@
+import * as THREE from 'three';
+import {OrbitControls} from './assets/OrbitControls.js';
+import {EffectComposer} from './assets/postprocessing/EffectComposer.js';
+import {RenderPass} from './assets/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from './assets/postprocessing/UnrealBloomPass.js';
+import {OutputPass} from './assets/postprocessing/OutputPass.js';
+import {createGlobeShell} from './globe-shell.js';
+import {createRegionStore, readJson} from './region-data.js';
+const $=s=>document.querySelector(s),TAU=Math.PI*2;
+let regionStore=null, activeData=null;
+const state={view:'china',radar:true,fly:true,event:true,point:true,heat:false,scatter:true,aura:true,code:'100000',name:'中国',history:[],busy:false};
+const root=$('#scene'), labelRoot=$('#labels');
+let renderer;
+try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});}catch(e){$('#loading span').textContent='此浏览器未能启用 WebGL，请开启硬件加速后重试';throw e;}
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.setClearColor('#020b12');renderer.outputColorSpace=THREE.SRGBColorSpace;root.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.fog=new THREE.FogExp2('#020b12',.0028);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,1600);camera.position.set(0,89,112).multiplyScalar(Math.max(1,1.45/camera.aspect));
+const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.55,.42,.8);composer.addPass(bloom);composer.addPass(new OutputPass());
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.065;controls.enablePan=false;controls.minDistance=42;controls.maxDistance=240*Math.max(1,1.45/camera.aspect);controls.maxPolarAngle=Math.PI*.47;controls.minPolarAngle=.05;controls.autoRotateSpeed=.5;controls.target.set(2,-6,0);
+scene.add(new THREE.AmbientLight('#9cc8ff',1.3));const sun=new THREE.DirectionalLight('#d0e7ff',2.3);sun.position.set(40,70,80);scene.add(sun);
+const mapWorld=new THREE.Group(),globeWorld=new THREE.Group();scene.add(mapWorld,globeWorld);globeWorld.visible=false;
+const base=new THREE.Group();mapWorld.add(base);let land=new THREE.Group(),fx=new THREE.Group();mapWorld.add(land,fx);
+const earth=new THREE.Group();globeWorld.add(earth);
+let chinaData=null,landMask=null,topMats=[],animatedObjects=[],radarTexture=null,globeLayers={radar:[],fly:[],event:[],point:[],heat:[],scatter:[],aura:[]};
+const radarProduct={url:'./assets/radar/cref-202608260054-0212.png',bounds:[73,12.2,135,54.2],label:'组合反射率 CREF',time:'2026-08-26 00:54–02:12',max:44.39};
+let pickables=[],mapLabels=[],earthLabels=[],pulses=[],flyDots=[],rings=[],heatMats=[],timeMats=[],hovered=null,project=null,cameraTween=null,transitionStart=0;
+const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2(),temp=new THREE.Vector3();
+const lineMat=(color,opacity=1)=>new THREE.LineBasicMaterial({color,transparent:true,opacity,depthWrite:false,blending:THREE.AdditiveBlending});
+function line(points,color,opacity=1){return new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),lineMat(color,opacity));}
+function v(x,y,z){return new THREE.Vector3(x,y,z)}
+function addLabel(text,pos,cls='',parent=mapWorld,list=mapLabels,html=false){const el=document.createElement('div');el.className='label '+cls;if(html){el.innerHTML=text;if(cls==='title')el.dataset.reflection=state.name;}else el.textContent=text;labelRoot.appendChild(el);const item={el,pos,parent,layer:null};list.push(item);return item;}
+function notice(msg){$('#notice').textContent=msg;$('#notice').style.opacity=1;clearTimeout(notice.timer);notice.timer=setTimeout(()=>$('#notice').style.opacity=0,2600);}
+function clean(group){group.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});group.clear();}
+function arc(radius,start,length,width,color,opacity=1){const mesh=new THREE.Mesh(new THREE.RingGeometry(radius,radius+width,150,1,start,length),new THREE.MeshBasicMaterial({color,transparent:true,opacity,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));mesh.rotation.x=-Math.PI/2;mesh.position.y=-1.1;return mesh;}
+// A restrained, perspectival grid and animated telemetry rings.
+const grid=new THREE.GridHelper(650,65,'#17364c','#0c2637');grid.position.y=-3.4;grid.material.transparent=true;grid.material.opacity=.48;base.add(grid);
+const crosses=[];for(let x=-170;x<=170;x+=10)for(let z=-170;z<=170;z+=10){crosses.push(v(x-.38,-3.3,z),v(x+.38,-3.3,z),v(x,-3.3,z-.38),v(x,-3.3,z+.38));}
+base.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(crosses),lineMat('#42638c',.3)));
+let seed=42;function random(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
+const tileGeo=new THREE.PlaneGeometry(9.6,9.6),tileMat=new THREE.MeshBasicMaterial({color:'#081423',transparent:true,opacity:.42,side:THREE.DoubleSide});for(let i=0;i<145;i++){const m=new THREE.Mesh(tileGeo,tileMat);m.rotation.x=-Math.PI/2;m.position.set(Math.round((random()-.5)*32)*10,-3.35,Math.round((random()-.5)*32)*10);base.add(m);}
+for(const [r,n,w,c,o] of [[54,3,.48,'#3266ff',.9],[60,3,.10,'#3186d9',.22],[65,4,1.35,'#173580',.25],[47,2,.10,'#37dcff',.2]]){const g=new THREE.Group();for(let i=0;i<n;i++)g.add(arc(r,i*TAU/n,TAU/n*.56,w,c,o));base.add(g);rings.push(g);}
+const floorParticles=new THREE.BufferGeometry(),particlePositions=[];for(let i=0;i<240;i++)particlePositions.push((random()-.5)*230,random()*24-3,(random()-.5)*200);floorParticles.setAttribute('position',new THREE.Float32BufferAttribute(particlePositions,3));const particles=new THREE.Points(floorParticles,new THREE.PointsMaterial({color:'#51e8e4',size:.19,transparent:true,opacity:.7,blending:THREE.AdditiveBlending}));base.add(particles);
+const streaks=[];for(let i=0;i<45;i++){let x=(random()-.5)*180,z=(random()-.5)*130,y=random()*14;const l=line([v(x,y,z),v(x,y+random()*5+.4,z)],'#6b9cb9',.28);base.add(l);streaks.push(l);}
+const topVertex=`varying vec3 p; void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
+const sideMat=new THREE.ShaderMaterial({uniforms:{t:{value:0}},vertexShader:topVertex,fragmentShader:`
+uniform float t;varying vec3 p;
+float hash(float n){return fract(sin(n)*43758.5453);}
+void main(){float z=clamp(p.z/3.6,0.,1.);float col=floor((p.x+p.y*.73)*62.);float stripe=pow(hash(col),5.);float glint=pow(max(0.,sin(p.z*1.4-t*1.5+hash(col)*6.28)),12.);float rim=pow(z,6.);vec3 c=mix(vec3(.004,.012,.035),vec3(.035,.14,.29),z);c+=vec3(.08,.23,.42)*stripe*(.4+glint);c+=vec3(.13,.35,.55)*rim;gl_FragColor=vec4(c,1.);}`});
+function topMaterial(){const material=new THREE.ShaderMaterial({uniforms:{highlight:{value:0}},vertexShader:topVertex,fragmentShader:`uniform float highlight;varying vec3 p;void main(){float east=smoothstep(-54.,54.,p.x);float n=fract(sin(dot(floor(p.xy*14.),vec2(12.9898,78.233)))*43758.5453);vec3 c=mix(vec3(.020,.050,.085),vec3(.040,.115,.245),east);c+=n*.003;c+=vec3(.004,.007,.011)*sin(p.y*.055);c=mix(c,vec3(.12,.35,.48),highlight*.7);gl_FragColor=vec4(c,1.);}`});topMats.push(material);return material;}
+function merc(c){return [c[0],Math.log(Math.tan(Math.PI/4+c[1]*Math.PI/360))*180/Math.PI];}
+function makeProjection(data){let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;for(const f of data.features){if(!f.geometry||f.properties.adcode==='100000_JD')continue;const polys=f.geometry.type==='MultiPolygon'?f.geometry.coordinates:[f.geometry.coordinates];for(const poly of polys)for(const c of poly[0]){if(state.code==='100000'&&c[1]<18)continue;const [x,y]=merc(c);minX=Math.min(x,minX);maxX=Math.max(x,maxX);minY=Math.min(y,minY);maxY=Math.max(y,maxY);}}
+const scale=Math.min(108/(maxX-minX),80/(maxY-minY));return c=>{let [x,y]=merc(c);return [(x-(minX+maxX)/2)*scale,(y-(minY+maxY)/2)*scale];};}
+function labelPosition(coord,y=3.82){const p=project(coord);return v(p[0],y,-p[1]);}
+function buildMap(data){activeData=data;clean(land);clean(fx);mapLabels.forEach(l=>l.el.remove());mapLabels=[];pickables=[];pulses=[];flyDots=[];heatMats=[];timeMats=[];animatedObjects=[];topMats=[];hovered=null;project=makeProjection(data);const side=sideMat.clone();timeMats.push(side);
+for(const feature of data.features){const {geometry,properties}=feature;if(!geometry)continue;const polys=geometry.type==='MultiPolygon'?geometry.coordinates:[geometry.coordinates];const top=topMaterial();const region=new THREE.Group();region.userData.feature=feature;
+for(const poly of polys){if(!poly[0]?.length)continue;const pts=poly[0].map(project);const shape=new THREE.Shape(pts.map(p=>new THREE.Vector2(...p)));for(const hole of poly.slice(1))shape.holes.push(new THREE.Path(hole.map(project).map(p=>new THREE.Vector2(...p))));const geo=new THREE.ExtrudeGeometry(shape,{depth:3.6,bevelEnabled:false,steps:1,curveSegments:1});const mesh=new THREE.Mesh(geo,[top,side]);mesh.rotation.x=-Math.PI/2;mesh.userData={feature,region,top};region.add(mesh);if(properties.name)pickables.push(mesh);
+for(const ring of poly){const p=ring.map(project);const edge=line(p.map(([x,y])=>v(x,3.63,-y)),'#c4e7ff',.58);region.add(edge);const bottom=line(p.map(([x,y])=>v(x,.06,-y)),'#248ec9',.45);region.add(bottom);}}
+land.add(region);const center=properties.centroid||properties.center;if(center&&properties.name){const item=addLabel(properties.name,labelPosition(center));item.feature=feature;}}
+buildLandMask(data);
+addLabel(state.name+'<small>'+ (state.code==='100000'?'CHINA':'')+'</small>',v(0,-1.4,49),'title',mapWorld,mapLabels,true);
+for(const [text,pos] of [['N',v(0,-2,-60)],['S',v(0,-2,63)],['W',v(-75,-2,0)],['E',v(75,-2,0)]])addLabel(text,pos,'direction');
+if(state.code==='100000')for(const [text,x,z] of [['蒙古',0,-29],['朝鲜',42,-10],['日本',64,0],['印度',-49,21],['缅甸',-20,37],['老挝',-7,43]])addLabel(text,v(x,.1,z),'country');
+for(const f of data.boundaryLines||[]){const lines=f.geometry.type==='MultiLineString'?f.geometry.coordinates:[f.geometry.coordinates];for(const coords of lines)land.add(line(coords.map(c=>labelPosition(c,3.65)),'#8ccfff',.6));}
+setupEffects(data);transitionStart=performance.now();$('#back').hidden=!state.history.length;$('#tooltip').hidden=true;renderNavigation();}
+function buildLandMask(data){landMask?.dispose();const c=document.createElement('canvas');c.width=c.height=2048;const ctx=c.getContext('2d');ctx.fillStyle='white';for(const f of data.features){if(!f.properties.name)continue;const polys=f.geometry.type==='MultiPolygon'?f.geometry.coordinates:[f.geometry.coordinates];for(const poly of polys){ctx.beginPath();for(const ring of poly){ring.forEach((coord,i)=>{const p=project(coord),x=(p[0]+80)/160*2048,y=(80-p[1])/160*2048;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.closePath();}ctx.fill('evenodd');}}landMask=new THREE.CanvasTexture(c);}
+function glowDisc(pos,color,radius=2){const material=new THREE.ShaderMaterial({uniforms:{color:{value:new THREE.Color(color).multiplyScalar(1.8)}},transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,vertexShader:`varying vec2 u;void main(){u=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`uniform vec3 color;varying vec2 u;void main(){float d=length(u-.5)*2.;gl_FragColor=vec4(color,pow(max(0.,1.-d),3.)*.7);}`});const m=new THREE.Mesh(new THREE.PlaneGeometry(radius*5,radius*5),material);m.rotation.x=-Math.PI/2;m.position.copy(pos);fx.add(m);return m;}
+function ringAt(pos,color,radius=1){const group=new THREE.Group();group.position.copy(pos);for(let i=0;i<3;i++){const r=arc(radius,0,TAU,.08,color,1);r.material.color.multiplyScalar(2.5);r.position.y=.06;r.userData.phase=i/3;group.add(r);pulses.push(r);}const fixed=arc(radius*.65,0,TAU,.14,color,1);fixed.material.color.multiplyScalar(2.);fixed.position.y=.1;group.add(fixed);fx.add(group);return group;}
+function beam(pos,color,height=10){const g=new THREE.Group();g.position.copy(pos);const mat=new THREE.ShaderMaterial({uniforms:{color:{value:new THREE.Color(color).multiplyScalar(3.)}},transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,vertexShader:`varying vec2 u;void main(){u=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`uniform vec3 color;varying vec2 u;void main(){float core=pow(max(0.,1.-abs(u.x-.5)*2.),8.);float a=core*pow(1.-u.y,.75);gl_FragColor=vec4(color,a*.9);}`});for(let i=0;i<2;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1.8,height),mat);m.position.y=height/2;m.rotation.y=i*Math.PI/2;g.add(m);}fx.add(g);return g;}
+let layerGroups={};
+function addRadarOverlay(){
+  if(!project)return;
+  const [west,south,east,north]=radarProduct.bounds,sw=project([west,south]),ne=project([east,north]);
+  if(!radarTexture){radarTexture=new THREE.TextureLoader().load(radarProduct.url,undefined,undefined,()=>notice('雷达影像加载失败，行政地图仍可使用'));radarTexture.colorSpace=THREE.SRGBColorSpace;radarTexture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);}
+  const material=new THREE.ShaderMaterial({
+    uniforms:{radar:{value:radarTexture},mask:{value:landMask},southwest:{value:new THREE.Vector2(...sw)},extent:{value:new THREE.Vector2(ne[0]-sw[0],ne[1]-sw[1])}},
+    transparent:true,depthWrite:false,side:THREE.DoubleSide,
+    vertexShader:'varying vec2 u;void main(){u=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:`uniform sampler2D radar;uniform sampler2D mask;uniform vec2 southwest;uniform vec2 extent;varying vec2 u;
+    void main(){vec2 xy=(u-.5)*160.;vec2 q=(xy-southwest)/extent;
+    if(any(lessThan(q,vec2(0.)))||any(greaterThan(q,vec2(1.))))discard;
+    float coverage=texture2D(mask,u).a;if(coverage<.05)discard;
+    gl_FragColor=texture2D(radar,q);gl_FragColor.a*=coverage*.95;
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    }`
+  });
+  const field=new THREE.Mesh(new THREE.PlaneGeometry(160,160),material);
+  field.rotation.x=-Math.PI/2;field.position.y=3.78;fx.add(field);layerGroups.radar.push(field);
+}
+function setupEffects(data){layerGroups={radar:[],fly:[],event:[],point:[],heat:[],scatter:[]};addRadarOverlay();const national=state.code==='100000';const centers=data.features.filter(f=>f.properties.center||f.properties.centroid).map(f=>f.properties.centroid||f.properties.center);
+const events=national?[[91,33],[96,32],[122,46],[132,45]]:centers.slice(0,4);
+events.forEach((coord,i)=>{const p=labelPosition(coord,3.85),color=i<2?'#ff8cda':'#7dffe4';const beamObject=beam(p,color,4.5);const ring=ringAt(p,color,.75);const disc=glowDisc(p,color,1.4);layerGroups.event.push(beamObject,ring,disc);const diamond=new THREE.Mesh(new THREE.OctahedronGeometry(.9),new THREE.MeshPhongMaterial({color,emissive:new THREE.Color(color).multiplyScalar(.8),shininess:80,transparent:true,opacity:.88}));diamond.scale.y=1.4;diamond.position.copy(p).add(v(0,3.8,0));fx.add(diamond);animatedObjects.push({object:diamond,y:diamond.position.y,phase:i});layerGroups.event.push(diamond);const label=addLabel('告警点#'+(i+1),p.clone().add(v(-.5,6.4,0)),'event '+(i<2?'pink':''));label.layer='event';});
+const flightCoords=national?[[104.1,24.5],[112,32],[119,34],[113,42]]:centers.slice(4,8);const hub=labelPosition(national?[106.2,38.5]:(centers[0]||[104,30]),3.85);
+flightCoords.forEach((coord,i)=>{const p=labelPosition(coord,3.85),color=i%2?'#ffa0df':'#58eaff';layerGroups.fly.push(beam(p,color,11+i),ringAt(p,color,.62),glowDisc(p,color,1.1));const midpoint=p.clone().lerp(hub,.5);midpoint.y=18+p.distanceTo(hub)*.13;const curve=new THREE.QuadraticBezierCurve3(p,midpoint,hub);const path=line(curve.getPoints(100),color,.28);fx.add(path);layerGroups.fly.push(path);const trail=new THREE.Group();for(let k=0;k<12;k++){const dot=new THREE.Mesh(new THREE.SphereGeometry(.13-k*.007,6,6),new THREE.MeshBasicMaterial({color:new THREE.Color(color).multiplyScalar(2.2),transparent:true,opacity:1-k/12}));trail.add(dot);flyDots.push({dot,curve,offset:i*.18-k*.006});}fx.add(trail);layerGroups.fly.push(trail);});
+// Concentric command center, radial segments and a transparent scan cylinder.
+const command=new THREE.Group();command.position.copy(hub);for(const [r,w,c,o] of [[2.1,.25,'#bdffff',1],[3.7,.15,'#5ef7ff',.9],[5,.11,'#81ddff',.8]]){const a=arc(r,0,TAU,w,c,o);a.position.y=.14;a.material.color.multiplyScalar(2.);command.add(a);}for(let i=0;i<36;i++){const a=arc(4.3,i*TAU/36,.08,.4,'#adfaff',.65);a.position.y=.15;command.add(a);}const scan=new THREE.Mesh(new THREE.CylinderGeometry(5,5,3.5,96,1,true),new THREE.ShaderMaterial({uniforms:{t:{value:0}},side:THREE.DoubleSide,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,vertexShader:`varying vec2 u;void main(){u=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`uniform float t;varying vec2 u;void main(){float sweep=pow(max(0.,cos(u.x*6.283-t*1.4)),16.);float a=(.035+sweep*.16)*pow(1.-u.y,1.2);gl_FragColor=vec4(.12,.65,1.,a);}`}));scan.position.y=1.8;command.add(scan);timeMats.push(scan.material);fx.add(command);layerGroups.point.push(command,beam(hub,'#b8ffff',20),glowDisc(hub,'#1aeeff',4.8),ringAt(hub,'#afffff',3));animatedObjects.push({object:command,rotate:true});
+const hot=national?[[87,46,6,.97],[91,34,5,.45],[92,28,6,.69],[99,29,5.5,.73],[100,38,5,.85],[106,38,6,.72],[105,29,6,.7],[113,31,5,.74],[119,25,6,1],[128,49,6,.72]]:centers.slice(0,9).map((c,i)=>[c[0],c[1],5+(i%2),.65+i%3*.14]);
+hot.forEach(([lon,lat,r,strength])=>{const p=labelPosition([lon,lat],3.78);const mat=new THREE.ShaderMaterial({uniforms:{mask:{value:landMask},center:{value:new THREE.Vector2(p.x,-p.z)},radius:{value:r},strength:{value:strength}},transparent:true,depthWrite:false,side:THREE.DoubleSide,vertexShader:`varying vec2 u;uniform float radius;uniform float strength;void main(){u=uv;vec3 p=position;float d=length((u-.5)*2.);p.z+=exp(-d*d*5.)*radius*.45*strength;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,fragmentShader:`varying vec2 u;uniform sampler2D mask;uniform vec2 center;uniform float radius;uniform float strength;void main(){vec2 xy=center+(u-.5)*radius*2.;if(texture2D(mask,(xy+80.)/160.).a<.5)discard;float d=length((u-.5)*2.);float a=exp(-d*d*3.5)*strength;vec3 c=mix(vec3(.0,.28,.20),vec3(.08,.95,.005),smoothstep(.12,.3,a));c=mix(c,vec3(1.,.96,.003),smoothstep(.45,.65,a));c=mix(c,vec3(1.,.015,.001),smoothstep(.83,.98,a));float alpha=(1.-smoothstep(.75,1.,d))*.94;gl_FragColor=vec4(c,alpha);}`});const hm=new THREE.Mesh(new THREE.PlaneGeometry(r*2,r*2,36,36),mat);hm.rotation.x=-Math.PI/2;hm.position.copy(p);fx.add(hm);layerGroups.heat.push(hm);});
+for(const f of data.features){const c=f.properties.center||f.properties.centroid;if(!c)continue;const p=labelPosition(c,3.88),mat=new THREE.MeshBasicMaterial({color:new THREE.Color('#4affe0').multiplyScalar(2.2)});const d=new THREE.Mesh(new THREE.SphereGeometry(.13,8,8),mat);d.position.copy(p);fx.add(d);layerGroups.scatter.push(d,glowDisc(p,'#47ffdf',.42));}
+applyLayers();}
+function applyLayers(){const groups=state.view==='earth'?globeLayers:layerGroups;for(const [k,objects] of Object.entries(groups))objects.forEach(o=>o.visible=state[k]);document.querySelectorAll('[data-layer]').forEach(b=>{const active=state[b.dataset.layer];b.classList.toggle('active',active);b.setAttribute('aria-pressed',active);b.disabled=switching;});if(activeData)renderNavigation();}
+async function getData(code){return regionStore.get(code);}
+function tweenCamera(pos,duration=1100,done=null){cameraTween={from:camera.position.clone(),to:pos,start:performance.now(),duration,done};}
+function home(){controls.target.set(state.view==='china'?2:0,state.view==='china'?-6:0,0);tweenCamera((state.view==='earth'?v(0,20,150):v(0,89,112)).multiplyScalar(Math.max(1,1.45/camera.aspect)));controls.autoRotate=false;$('#orbit').classList.remove('active');$('#orbit').setAttribute('aria-pressed','false');}
+async function drill(feature){
+  if(state.busy||switching)return;
+  const props=feature.properties,code=String(props.adcode);
+  if(code===state.code){notice(props.level==='town'?'已到乡镇层级':'该区域暂缺下级边界数据');return;}
+  const previous={code:state.code,name:state.name,data:activeData,detail:state.detail};
+  state.busy=true;renderNavigation();notice('正在进入'+props.name);
+  try {
+    const hasChildren=regionStore.has(code);
+    const data=hasChildren?await getData(code):{type:'FeatureCollection',features:[feature]};
+    state.history.push(previous);state.code=code;state.name=props.name;state.detail=!hasChildren;
+    try{buildMap(data);home();}catch(error){state.history.pop();Object.assign(state,previous);buildMap(previous.data);throw error;}
+    $('#notice').style.opacity=0;
+  }catch(error){notice('边界加载失败，已保留当前地图，请重试');console.error(error);}
+  finally{state.busy=false;renderNavigation();}
+}
+function returnTo(index){
+  if(state.busy||switching)return;
+  const target=state.history[index];if(!target)return;
+  const oldHistory=[...state.history],oldState={code:state.code,name:state.name,data:activeData,detail:state.detail};
+  state.busy=true;
+  try{state.history=state.history.slice(0,index);state.code=target.code;state.name=target.name;state.detail=target.detail;buildMap(target.data);home();}
+  catch(error){state.history=oldHistory;Object.assign(state,oldState);buildMap(oldState.data);notice('返回失败，已保留当前地图');}
+  finally{state.busy=false;renderNavigation();}
+}
+$('#back').onclick=()=>returnTo(state.history.length-1);
+function renderNavigation(){
+  $('#region-nav').hidden=state.view!=='china';
+  const crumbs=$('#region-crumbs');crumbs.replaceChildren();
+  state.history.forEach((item,index)=>{const button=document.createElement('button');button.textContent=item.name;button.disabled=state.busy||switching;button.onclick=()=>returnTo(index);crumbs.append(button,document.createTextNode(' / '));});
+  const current=document.createElement('strong');current.textContent=state.name;crumbs.append(current);
+  const select=$('#region-select');select.replaceChildren(new Option('选择区域进入…',''));
+  for(const f of activeData?.features||[]){if(String(f.properties.adcode)===state.code)continue;select.add(new Option(f.properties.name,String(f.properties.adcode)));}
+  select.disabled=state.busy||switching||select.options.length===1;
+  $('#region-status').textContent=state.busy?'正在加载边界…':state.detail?(activeData.features[0].properties.level==='town'?'已到乡镇层级':activeData.features[0].properties.level==='district'?'当前区县 · 暂缺乡镇边界':'当前区域 · 暂缺下级边界'):state.code==='100000'?'34 个省级区域 · 使用提供的省界':activeData.features.length+' 个下级区域 · 点击地图或选择区域';
+  $('.radar-panel').hidden=state.view!=='china'||!state.radar;
+}
+$('#region-select').onchange=e=>{const f=activeData.features.find(f=>String(f.properties.adcode)===e.target.value);if(f)drill(f);};
+
+function makeGlobe(){const loader=new THREE.TextureLoader();const texture=loader.load('./assets/earth.jpg');texture.colorSpace=THREE.SRGBColorSpace;const normal=loader.load('./assets/bump.jpg');const sphere=new THREE.Mesh(new THREE.SphereGeometry(30,128,80),new THREE.MeshPhongMaterial({map:texture,color:'#a7c8ed',normalMap:normal,normalScale:new THREE.Vector2(.22,.22),shininess:20,specular:new THREE.Color('#366ea9')}));earth.add(sphere);
+const cloudTex=loader.load('./assets/clouds.png');const cloud=new THREE.Mesh(new THREE.SphereGeometry(30.24,96,64),new THREE.MeshPhongMaterial({map:cloudTex,transparent:true,opacity:.48,depthWrite:false,blending:THREE.AdditiveBlending}));earth.add(cloud);earth.userData.cloud=cloud;
+for(const [radius,power,opacity] of [[30.5,4.,.9],[32,4.5,.38],[35,5.,.12]]){const atmosphere=new THREE.Mesh(new THREE.SphereGeometry(radius,96,64),new THREE.ShaderMaterial({uniforms:{power:{value:power},opacity:{value:opacity}},transparent:true,side:THREE.BackSide,depthWrite:false,blending:THREE.AdditiveBlending,vertexShader:`varying vec3 n;varying vec3 e;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);n=normalize(normalMatrix*normal);e=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`,fragmentShader:`uniform float power;uniform float opacity;varying vec3 n;varying vec3 e;void main(){float rim=pow(max(0.,1.-abs(dot(n,e))),power);gl_FragColor=vec4(.02,.55,1.5,rim*opacity);}`}));earth.add(atmosphere);}
+const ll=(lon,lat,r=30.4)=>{const phi=lat*Math.PI/180,theta=lon*Math.PI/180;return v(r*Math.cos(phi)*Math.cos(theta),r*Math.sin(phi),-r*Math.cos(phi)*Math.sin(theta));};
+// Geographic outlines are projected onto the same globe as the Earth image.
+for(const f of chinaData.features){const polys=f.geometry.type==='MultiPolygon'?f.geometry.coordinates:[f.geometry.coordinates];for(const poly of polys)for(const ring of poly){const pts=ring.filter((_,i)=>i%2===0).map(c=>ll(c[0],c[1],30.35));if(pts.length<3)continue;pts.push(pts[0]);const border=line(pts,'#72ebff',.8);border.material.color.multiplyScalar(2.2);earth.add(border);}}
+const locations=[['北京',116.4,39.9],['上海',121.5,31.2],['新加坡',103.8,1.3],['东京',139.7,35.7],['悉尼',151.2,-33.9],['孟买',72.9,19.1],['迪拜',55.3,25.2],['伦敦',-.12,51.5],['巴黎',2.3,48.8],['莫斯科',37.6,55.8],['开罗',31.2,30],['纽约',-74,40.7],['洛杉矶',-118,34],['巴西利亚',-47.9,-15.8],['约翰内斯堡',28,-26.2]];
+const start=ll(116.4,39.9);earth.userData.travellers=[];
+for(const [index,[name,lon,lat]] of locations.entries()){const p=ll(lon,lat);const dot=new THREE.Mesh(new THREE.SphereGeometry(.10,8,8),new THREE.MeshBasicMaterial({color:new THREE.Color('#bfffff').multiplyScalar(2.5)}));dot.position.copy(p);earth.add(dot);globeLayers.point.push(dot);const bar=line([p,p.clone().normalize().multiplyScalar(33.5+index%4)],index%3?'#a8eaff':'#ffdc88',.7);bar.material.color.multiplyScalar(1.6);earth.add(bar);globeLayers.point.push(bar);const label=addLabel(name,p.clone().multiplyScalar(1.035),'earthlabel',earth,earthLabels);label.surface=true;label.layer='event';
+if(index){const pts=[];for(let k=0;k<=120;k++){const t=k/120;pts.push(start.clone().lerp(p,t).normalize().multiplyScalar(30.6+Math.sin(t*Math.PI)*(start.distanceTo(p)*.22+2)));}const curve=new THREE.CatmullRomCurve3(pts);const path=line(pts,index%3?'#9ee8ff':'#ffd18c',.45);earth.add(path);globeLayers.fly.push(path);const travel=new THREE.Mesh(new THREE.SphereGeometry(.12,8,8),new THREE.MeshBasicMaterial({color:new THREE.Color('#d5fbff').multiplyScalar(2.2)}));earth.add(travel);globeLayers.fly.push(travel);earth.userData.travellers.push({object:travel,curve,phase:index*.07});
+const surface=[];for(let k=0;k<=90;k++){const t=k/90;surface.push(start.clone().lerp(p,t).normalize().multiplyScalar(30.35));}const route=line(surface,'#78bbec',.24);earth.add(route);globeLayers.heat.push(route);
+if(index%2){const sea=new THREE.Points(new THREE.BufferGeometry().setFromPoints(pts),new THREE.PointsMaterial({color:'#53c9ee',size:.10,transparent:true,opacity:.5}));earth.add(sea);globeLayers.scatter.push(sea);}}}
+// Spherical travelling scan and wide orbit follow the reference independently of Earth rotation.
+earth.userData.shell=createGlobeShell(globeWorld);globeLayers.aura.push(earth.userData.shell.group);
+earth.rotation.y=2.73;earth.rotation.z=-.12;
+const starGeo=new THREE.BufferGeometry(),stars=[];for(let i=0;i<1900;i++){const p=v(random()-.5,random()-.5,random()-.5).normalize().multiplyScalar(280+random()*240);stars.push(p.x,p.y,p.z);}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(stars,3));globeWorld.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:'#c3dbef',size:.42,transparent:true,opacity:.6})));}
+function activateView(mode){state.view=mode;if(mode==='earth')earth.userData.shell.reset(performance.now()/1000);mapWorld.visible=mode==='china';globeWorld.visible=mode==='earth';scene.fog.density=mode==='earth'?.0002:.0028;renderer.setClearColor(mode==='earth'?'#000104':'#020b12');bloom.strength=mode==='earth'?.7:.55;document.querySelectorAll('[data-view]').forEach(b=>{b.classList.toggle('selected',b.dataset.view===mode);b.setAttribute('aria-pressed',b.dataset.view===mode);});$('.tabs').dataset.active=mode;$('#back').hidden=mode==='earth'||!state.history.length;$('#tooltip').hidden=true;updateToolbar();applyLayers();}
+let switching=false;
+function switchView(mode){if(mode===state.view||switching||state.busy)return;switching=true;document.querySelectorAll('button').forEach(b=>b.disabled=true);controls.enabled=false;controls.autoRotate=false;$('#orbit').classList.remove('active');$('#orbit').setAttribute('aria-pressed','false');$('#transition').style.opacity='1';
+const outward=mode==='earth'?camera.position.clone().normalize().multiplyScalar(205):camera.position.clone().normalize().multiplyScalar(48);
+tweenCamera(outward,850,()=>{activateView(mode);controls.target.set(mode==='china'?2:0,mode==='china'?-6:0,0);const fit=Math.max(1,1.45/camera.aspect);camera.position.copy((mode==='earth'?v(0,9,63):v(0,149,189)).multiplyScalar(fit));$('#transition').style.opacity='0';const destination=(mode==='earth'?v(0,20,150):v(0,89,112)).multiplyScalar(fit);tweenCamera(destination,1650,()=>{switching=false;document.querySelectorAll('button').forEach(b=>b.disabled=false);controls.enabled=true;renderNavigation();});});}
+function updateToolbar(){$('.hint').textContent=state.view==='earth'?'拖动旋转 · 滚轮缩放':'拖动旋转 · 滚轮缩放 · 点击区域下钻';const mapNames={radar:'雷达回波',fly:'柱子飞线',event:'事件标签',point:'重点点位',heat:'模拟热力',scatter:'地图散点',aura:'粒子光环'},earthNames={radar:'雷达回波',fly:'飞线',event:'标签',point:'柱状图',heat:'陆运线',scatter:'海航线',aura:'粒子光环'};document.querySelectorAll('[data-layer]').forEach(b=>{b.querySelector('.control-label').textContent=(state.view==='earth'?earthNames:mapNames)[b.dataset.layer];b.hidden=(b.dataset.layer==='aura'&&state.view==='china')||(b.dataset.layer==='radar'&&state.view==='earth');});}
+document.querySelectorAll('[data-layer]').forEach(b=>b.onclick=()=>{state[b.dataset.layer]=!state[b.dataset.layer];applyLayers();});document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+$('#in').onclick=()=>tweenCamera(camera.position.clone().multiplyScalar(.82),400);$('#out').onclick=()=>tweenCamera(camera.position.clone().multiplyScalar(1.2),400);$('#top').onclick=()=>tweenCamera(v(0,145,.1).multiplyScalar(Math.max(1,1.45/camera.aspect)));$('#reset').onclick=home;$('#orbit').onclick=()=>{controls.autoRotate=!controls.autoRotate;$('#orbit').classList.toggle('active',controls.autoRotate);$('#orbit').setAttribute('aria-pressed',controls.autoRotate);};$('#fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{notice('请使用浏览器的全屏模式');}};
+function pointerHit(e){const r=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);raycaster.setFromCamera(pointer,camera);return raycaster.intersectObjects(pickables,false)[0]?.object;}
+let down=null;renderer.domElement.addEventListener('pointerdown',e=>{if(switching)return;down=[e.clientX,e.clientY];cameraTween=null;});renderer.domElement.addEventListener('pointermove',e=>{if(state.view!=='china'||e.buttons)return;const hit=pointerHit(e);if(hovered&&hovered!==hit){hovered.userData.top.uniforms.highlight.value=0;}hovered=hit;const tooltip=$('#tooltip');if(hit){hit.userData.top.uniforms.highlight.value=1;tooltip.hidden=false;tooltip.replaceChildren();const name=document.createElement('span');name.textContent=hit.userData.feature.properties.name;const help=document.createElement('small');help.textContent='点击查看下级区域';tooltip.append(name,help);tooltip.style.left=Math.min(e.clientX+18,innerWidth-180)+'px';tooltip.style.top=Math.min(e.clientY+16,innerHeight-80)+'px';renderer.domElement.style.cursor='pointer';}else{tooltip.hidden=true;renderer.domElement.style.cursor='grab';}});
+renderer.domElement.addEventListener('pointerup',e=>{if(state.view!=='china'||!down)return;if(Math.hypot(e.clientX-down[0],e.clientY-down[1])<5){const hit=pointerHit(e);if(hit)drill(hit.userData.feature);}down=null;});renderer.domElement.addEventListener('pointerleave',()=>{$('#tooltip').hidden=true;if(hovered)hovered.userData.top.uniforms.highlight.value=0;hovered=null;});renderer.domElement.addEventListener('wheel',()=>{if(!switching)cameraTween=null;},{passive:true});
+addEventListener('resize',()=>{const oldFit=Math.max(1,1.45/camera.aspect);camera.aspect=innerWidth/innerHeight;const fit=Math.max(1,1.45/camera.aspect);camera.position.multiplyScalar(fit/oldFit);controls.maxDistance=240*fit;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);});
+function updateLabels(list,visible){for(const l of list){let show=visible&&(!l.layer||state[l.layer]);if(show){temp.copy(l.pos);l.parent.localToWorld(temp);if(l.surface){const center=l.parent.getWorldPosition(new THREE.Vector3());show=temp.clone().sub(center).dot(camera.position.clone().sub(temp))>0;}temp.project(camera);show=show&&temp.z<1&&Math.abs(temp.x)<1.2&&Math.abs(temp.y)<1.2;if(show){l.el.style.left=(temp.x*.5+.5)*innerWidth+'px';l.el.style.top=(-temp.y*.5+.5)*innerHeight+'px';}}
+l.el.style.display=show?'block':'none';}}
+const clock=new THREE.Clock();function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime(),now=performance.now();if(cameraTween){const a=Math.min(1,(now-cameraTween.start)/cameraTween.duration),e=1-Math.pow(1-a,3);camera.position.lerpVectors(cameraTween.from,cameraTween.to,e);if(a===1){const done=cameraTween.done;cameraTween=null;done?.();}}controls.update();rings.forEach((g,i)=>g.rotation.y=t*(i%2?-.035:.06));particles.rotation.y=t*.005;streaks.forEach((l,i)=>l.material.opacity=.08+.22*(.5+.5*Math.sin(t*.8+i)));timeMats.forEach(m=>m.uniforms.t.value=t);pulses.forEach((r,i)=>{const phase=(t*.5+r.userData.phase)%1;r.scale.setScalar(.6+phase*1.5);r.material.opacity=(1-phase)*.75;});animatedObjects.forEach(({object,y,phase,rotate})=>{if(rotate)object.rotation.y=t*.22;else{object.position.y=y+Math.sin(t*1.7+phase)*.3;object.rotation.y=t*.35;}});flyDots.forEach(({dot,curve,offset})=>dot.position.copy(curve.getPoint((t*.17+offset)%1)));if(globeWorld.visible){earth.rotation.y+=.0002;earth.userData.cloud.rotation.y+=.00016;earth.userData.shell.update(now/1000);earth.userData.travellers.forEach(({object,curve,phase})=>object.position.copy(curve.getPoint((t*.07+phase)%1)));}const reveal=Math.min(1,(now-transitionStart)/900);land.scale.y=.12+.88*(1-Math.pow(1-reveal,3));updateLabels(mapLabels,mapWorld.visible);updateLabels(earthLabels,globeWorld.visible);composer.render();}
+$('#retry').onclick=()=>location.reload();
+try{
+  regionStore=createRegionStore(await readJson('./assets/regions/manifest.json'));
+  const data=await getData('100000');chinaData=data;buildMap(data);makeGlobe();updateToolbar();animate();
+  $('#loading').style.opacity=0;setTimeout(()=>$('#loading').remove(),650);
+}catch(e){$('#loading span').textContent='地图加载失败，请重新加载';$('#loading .loader').style.display='none';$('#retry').hidden=false;console.error(e);}
