@@ -206,4 +206,4 @@ try{
   const data=await getData('100000');chinaData=data;buildMap(data);makeGlobe();updateToolbar();animate();
   if(new URLSearchParams(location.search).get("scene")==="g214")await switchView("road");
   $('#loading').style.opacity=0;setTimeout(()=>$('#loading').remove(),650);
-}catch(e){$('#loading span').textContent='地图加载失败，请重新加载';$('#loading .loader').style.display='none';$('#retry').hidden=false;console.error(e);}
+}catch(e){$('#loading span').textContent='地图暂未加载成功：'+(e.message||'请检查网络后重试');$('#loading .loader').style.display='none';$('#retry').hidden=false;console.error(e);}

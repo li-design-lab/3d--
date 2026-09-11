@@ -23,14 +23,26 @@ export function normalizeRegions(data, defaults = {}) {
   return {...data, features, boundaryLines:data.boundaryLines || (data.features || []).filter(f=>['MultiLineString','LineString'].includes(f.geometry?.type))};
 }
 
-export async function readJson(url, timeout = 8000) {
-  const controller = new AbortController();
-  const timer = setTimeout(()=>controller.abort(), timeout);
-  try {
-    const r = await fetch(url, {signal:controller.signal});
-    if (!r.ok) throw Error(`边界加载失败 (${r.status})`);
-    return await r.json();
-  } finally { clearTimeout(timer); }
+export async function readJson(url, timeout = 30000, attempts = 3) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(()=>controller.abort(), timeout);
+    try {
+      const r = await fetch(url, {signal:controller.signal, cache:attempt ? 'reload' : 'default'});
+      if (!r.ok) {
+        const error = Error(`数据请求失败 (${r.status})：${url}`);
+        error.retryable = r.status >= 500 || r.status === 408 || r.status === 429;
+        throw error;
+      }
+      return await r.json();
+    } catch (error) {
+      if (error.retryable === false || error instanceof SyntaxError || attempt === attempts - 1) {
+        if (controller.signal.aborted) throw Error(`网络较慢，地图数据请求超时：${url}`);
+        throw error;
+      }
+      // Retry transient failures without requiring a full reload of the 3D app.
+    } finally { clearTimeout(timer); }
+  }
 }
 
 export function createRegionStore(manifest) {

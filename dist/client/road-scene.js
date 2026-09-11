@@ -1,3 +1,4 @@
+import {readJson} from './region-data.js';
 import * as THREE from 'three';
 import {prepareRoadData, roadProjection, chainageLabel, mercator} from './road-data.js';
 
@@ -6,11 +7,7 @@ const vector = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 export async function createRoadScene({scene, camera, controls, renderer, notice, onNavigate}) {
-  const getJson = async path => {
-    const response = await fetch(path, {signal: AbortSignal.timeout(10000)});
-    if (!response.ok) throw Error(`G214 数据加载失败 (${response.status})`);
-    return response.json();
-  };
+  const getJson = readJson;
   const [source, boundary] = await Promise.all([getJson('./assets/roads/road.json'), getJson('./assets/540300.json')]);
   const data = prepareRoadData(source), project = roadProjection(data.bounds);
   const demo = data.mode === 'synthetic';
