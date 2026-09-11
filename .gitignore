@@ -1,3 +1,10 @@
 node_modules/
 dist/build/
 .pages-dist/
+
+# Local source data and browser evidence must never be published.
+.private/
+output/
+.playwright-cli/
+*.xlsx
+*.xls

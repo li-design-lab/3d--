@@ -1,0 +1,1253 @@
+{
+  "version": 1,
+  "mode": "synthetic",
+  "chainageUnit": "metres",
+  "title": "昌都 · 公路演示",
+  "sourceFile": "独立数学曲线生成，不来自原始表格",
+  "coordinateReferenceSystem": "演示经纬度，无测绘用途",
+  "geometryNote": "线路及资产均为虚构，不代表真实道路",
+  "records": [
+    {
+      "id": "demo-m-0",
+      "kind": "milestone",
+      "sequence": 1,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 20000,
+      "coordinates": [
+        97.6,
+        31.65
+      ],
+      "note": "演示起点",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 1,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-1",
+      "kind": "milestone",
+      "sequence": 2,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 21000,
+      "coordinates": [
+        97.616121,
+        31.646768
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 2,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-2",
+      "kind": "milestone",
+      "sequence": 3,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 22000,
+      "coordinates": [
+        97.631003,
+        31.643346
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 3,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-3",
+      "kind": "milestone",
+      "sequence": 4,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 23000,
+      "coordinates": [
+        97.643567,
+        31.639551
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 4,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-4",
+      "kind": "milestone",
+      "sequence": 5,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 24000,
+      "coordinates": [
+        97.653032,
+        31.635217
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 5,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-5",
+      "kind": "milestone",
+      "sequence": 6,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 25000,
+      "coordinates": [
+        97.65901,
+        31.630195
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 6,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-6",
+      "kind": "milestone",
+      "sequence": 7,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 26000,
+      "coordinates": [
+        97.661542,
+        31.624369
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 7,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-7",
+      "kind": "milestone",
+      "sequence": 8,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 27000,
+      "coordinates": [
+        97.661082,
+        31.617651
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 8,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-8",
+      "kind": "milestone",
+      "sequence": 9,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 28000,
+      "coordinates": [
+        97.658411,
+        31.60999
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 9,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-9",
+      "kind": "milestone",
+      "sequence": 10,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 29000,
+      "coordinates": [
+        97.654512,
+        31.601372
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 10,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-10",
+      "kind": "milestone",
+      "sequence": 11,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 30000,
+      "coordinates": [
+        97.650418,
+        31.591823
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 11,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-11",
+      "kind": "milestone",
+      "sequence": 12,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 31000,
+      "coordinates": [
+        97.647055,
+        31.581404
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 12,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-12",
+      "kind": "milestone",
+      "sequence": 13,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 32000,
+      "coordinates": [
+        97.645098,
+        31.570211
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 13,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-13",
+      "kind": "milestone",
+      "sequence": 14,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 33000,
+      "coordinates": [
+        97.644873,
+        31.558372
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 14,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-14",
+      "kind": "milestone",
+      "sequence": 15,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 34000,
+      "coordinates": [
+        97.646306,
+        31.54604
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 15,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-15",
+      "kind": "milestone",
+      "sequence": 16,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 35000,
+      "coordinates": [
+        97.648939,
+        31.533387
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 16,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-16",
+      "kind": "milestone",
+      "sequence": 17,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 36000,
+      "coordinates": [
+        97.651998,
+        31.520599
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 17,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-17",
+      "kind": "milestone",
+      "sequence": 18,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 37000,
+      "coordinates": [
+        97.654515,
+        31.507867
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 18,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-18",
+      "kind": "milestone",
+      "sequence": 19,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 38000,
+      "coordinates": [
+        97.655474,
+        31.49538
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 19,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-19",
+      "kind": "milestone",
+      "sequence": 20,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 39000,
+      "coordinates": [
+        97.653975,
+        31.483315
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 20,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-20",
+      "kind": "milestone",
+      "sequence": 21,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 40000,
+      "coordinates": [
+        97.649373,
+        31.471837
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 21,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-21",
+      "kind": "milestone",
+      "sequence": 22,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 41000,
+      "coordinates": [
+        97.641391,
+        31.461082
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 22,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-22",
+      "kind": "milestone",
+      "sequence": 23,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 42000,
+      "coordinates": [
+        97.630176,
+        31.451162
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 23,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-23",
+      "kind": "milestone",
+      "sequence": 24,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 43000,
+      "coordinates": [
+        97.616292,
+        31.442151
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 24,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-24",
+      "kind": "milestone",
+      "sequence": 25,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 44000,
+      "coordinates": [
+        97.600663,
+        31.434092
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 25,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-25",
+      "kind": "milestone",
+      "sequence": 26,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 45000,
+      "coordinates": [
+        97.584455,
+        31.426986
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 26,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-26",
+      "kind": "milestone",
+      "sequence": 27,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 46000,
+      "coordinates": [
+        97.568925,
+        31.420797
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 27,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-27",
+      "kind": "milestone",
+      "sequence": 28,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 47000,
+      "coordinates": [
+        97.555261,
+        31.415454
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 28,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-28",
+      "kind": "milestone",
+      "sequence": 29,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 48000,
+      "coordinates": [
+        97.544426,
+        31.41085
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 29,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-29",
+      "kind": "milestone",
+      "sequence": 30,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 49000,
+      "coordinates": [
+        97.537039,
+        31.40685
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 30,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-30",
+      "kind": "milestone",
+      "sequence": 31,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 50000,
+      "coordinates": [
+        97.533299,
+        31.403294
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 31,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-31",
+      "kind": "milestone",
+      "sequence": 32,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 51000,
+      "coordinates": [
+        97.532973,
+        31.400006
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 32,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-32",
+      "kind": "milestone",
+      "sequence": 33,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 52000,
+      "coordinates": [
+        97.535446,
+        31.396797
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 33,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-33",
+      "kind": "milestone",
+      "sequence": 34,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 53000,
+      "coordinates": [
+        97.539817,
+        31.393477
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 34,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-34",
+      "kind": "milestone",
+      "sequence": 35,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 54000,
+      "coordinates": [
+        97.545043,
+        31.389859
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 35,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-35",
+      "kind": "milestone",
+      "sequence": 36,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 55000,
+      "coordinates": [
+        97.550097,
+        31.385768
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 36,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-36",
+      "kind": "milestone",
+      "sequence": 37,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 56000,
+      "coordinates": [
+        97.554123,
+        31.381048
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 37,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-37",
+      "kind": "milestone",
+      "sequence": 38,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 57000,
+      "coordinates": [
+        97.556559,
+        31.375569
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 38,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-38",
+      "kind": "milestone",
+      "sequence": 39,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 58000,
+      "coordinates": [
+        97.55722,
+        31.36923
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 39,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-39",
+      "kind": "milestone",
+      "sequence": 40,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 59000,
+      "coordinates": [
+        97.556324,
+        31.361965
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 40,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-40",
+      "kind": "milestone",
+      "sequence": 41,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 60000,
+      "coordinates": [
+        97.554452,
+        31.353745
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 41,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-41",
+      "kind": "milestone",
+      "sequence": 42,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 61000,
+      "coordinates": [
+        97.552456,
+        31.344578
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 42,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-42",
+      "kind": "milestone",
+      "sequence": 43,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 62000,
+      "coordinates": [
+        97.551326,
+        31.33451
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 43,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-43",
+      "kind": "milestone",
+      "sequence": 44,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 63000,
+      "coordinates": [
+        97.552034,
+        31.323626
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 44,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-44",
+      "kind": "milestone",
+      "sequence": 45,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 64000,
+      "coordinates": [
+        97.555377,
+        31.312038
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 45,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-45",
+      "kind": "milestone",
+      "sequence": 46,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 65000,
+      "coordinates": [
+        97.561846,
+        31.299891
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 46,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-46",
+      "kind": "milestone",
+      "sequence": 47,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 66000,
+      "coordinates": [
+        97.57154,
+        31.287349
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 47,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-47",
+      "kind": "milestone",
+      "sequence": 48,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 67000,
+      "coordinates": [
+        97.584129,
+        31.274595
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 48,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-48",
+      "kind": "milestone",
+      "sequence": 49,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 68000,
+      "coordinates": [
+        97.598884,
+        31.261816
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 49,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-49",
+      "kind": "milestone",
+      "sequence": 50,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 69000,
+      "coordinates": [
+        97.614767,
+        31.249205
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 50,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-50",
+      "kind": "milestone",
+      "sequence": 51,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 70000,
+      "coordinates": [
+        97.630556,
+        31.236943
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 51,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-51",
+      "kind": "milestone",
+      "sequence": 52,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 71000,
+      "coordinates": [
+        97.645009,
+        31.225203
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 52,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-52",
+      "kind": "milestone",
+      "sequence": 53,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 72000,
+      "coordinates": [
+        97.657019,
+        31.214132
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 53,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-53",
+      "kind": "milestone",
+      "sequence": 54,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 73000,
+      "coordinates": [
+        97.665766,
+        31.203853
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 54,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-54",
+      "kind": "milestone",
+      "sequence": 55,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 74000,
+      "coordinates": [
+        97.670811,
+        31.194458
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 55,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-55",
+      "kind": "milestone",
+      "sequence": 56,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 75000,
+      "coordinates": [
+        97.672151,
+        31.186
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 56,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-56",
+      "kind": "milestone",
+      "sequence": 57,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 76000,
+      "coordinates": [
+        97.670201,
+        31.1785
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 57,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-57",
+      "kind": "milestone",
+      "sequence": 58,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 77000,
+      "coordinates": [
+        97.665728,
+        31.171936
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 58,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-58",
+      "kind": "milestone",
+      "sequence": 59,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 78000,
+      "coordinates": [
+        97.659731,
+        31.166252
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 59,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-59",
+      "kind": "milestone",
+      "sequence": 60,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 79000,
+      "coordinates": [
+        97.653284,
+        31.161355
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 60,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-m-60",
+      "kind": "milestone",
+      "sequence": 61,
+      "route": "DEMO",
+      "name": null,
+      "rawChainage": 80000,
+      "coordinates": [
+        97.647384,
+        31.157122
+      ],
+      "note": "演示终点",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 61,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-b-0",
+      "kind": "bridge",
+      "sequence": 1,
+      "route": "DEMO",
+      "name": "示例桥 01",
+      "rawChainage": 23500,
+      "coordinates": [
+        97.648722,
+        31.637461
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 1,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-b-1",
+      "kind": "bridge",
+      "sequence": 2,
+      "route": "DEMO",
+      "name": "示例桥 02",
+      "rawChainage": 30500,
+      "coordinates": [
+        97.648596,
+        31.586717
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 2,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-b-2",
+      "kind": "bridge",
+      "sequence": 3,
+      "route": "DEMO",
+      "name": "示例桥 03",
+      "rawChainage": 37500,
+      "coordinates": [
+        97.65525,
+        31.501581
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 3,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-b-3",
+      "kind": "bridge",
+      "sequence": 4,
+      "route": "DEMO",
+      "name": "示例桥 04",
+      "rawChainage": 44500,
+      "coordinates": [
+        97.592553,
+        31.430421
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 4,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-b-4",
+      "kind": "bridge",
+      "sequence": 5,
+      "route": "DEMO",
+      "name": "示例桥 05",
+      "rawChainage": 51500,
+      "coordinates": [
+        97.533911,
+        31.398404
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 5,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-b-5",
+      "kind": "bridge",
+      "sequence": 6,
+      "route": "DEMO",
+      "name": "示例桥 06",
+      "rawChainage": 58500,
+      "coordinates": [
+        97.556938,
+        31.365716
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 6,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-b-6",
+      "kind": "bridge",
+      "sequence": 7,
+      "route": "DEMO",
+      "name": "示例桥 07",
+      "rawChainage": 65500,
+      "coordinates": [
+        97.566301,
+        31.293658
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 7,
+        "range": "非表格数据"
+      }
+    },
+    {
+      "id": "demo-b-7",
+      "kind": "bridge",
+      "sequence": 8,
+      "route": "DEMO",
+      "name": "示例桥 08",
+      "rawChainage": 72500,
+      "coordinates": [
+        97.661838,
+        31.208887
+      ],
+      "note": "",
+      "source": {
+        "sheet": "数学曲线演示",
+        "row": 8,
+        "range": "非表格数据"
+      }
+    }
+  ]
+}

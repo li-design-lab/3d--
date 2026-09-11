@@ -4,7 +4,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "local:install": "node scripts/manage-local-service.mjs install",
+    "local:status": "node scripts/manage-local-service.mjs status",
+    "local:start": "node scripts/manage-local-service.mjs start",
+    "local:stop": "node scripts/manage-local-service.mjs stop"
   },
   "devDependencies": {
     "vite": "6.1.0"
