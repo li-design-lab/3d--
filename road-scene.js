@@ -1,6 +1,7 @@
-import {readJson} from './region-data.js?v=4e26be6f9bfc05ad96277602e1c84d3efe21c59c';
+import {readJson} from './region-data.js?v=9d6b8ed35e1e9ef02eafe80b019e99601f4803f1';
 import * as THREE from 'three';
-import {prepareRoadData, roadProjection, chainageLabel, mercator} from './road-data.js?v=4e26be6f9bfc05ad96277602e1c84d3efe21c59c';
+import {prepareRoadData, roadProjection, mercator} from './road-data.js?v=9d6b8ed35e1e9ef02eafe80b019e99601f4803f1';
+import {prepareRoadElements, attachRoadElements, elementLabel} from './road-elements.js?v=9d6b8ed35e1e9ef02eafe80b019e99601f4803f1';
 
 const CYAN = '#65e7ff', GOLD = '#ffbd68', ICE = '#d3f7ff';
 const vector = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -8,20 +9,21 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'
 
 export async function createRoadScene({scene, camera, controls, renderer, notice, onNavigate}) {
   const getJson = readJson;
-  const [source, boundary] = await Promise.all([getJson('./assets/roads/road.json'), getJson('./assets/540300.json')]);
-  const data = prepareRoadData(source), project = roadProjection(data.bounds);
+  const [source, elementSource, boundary] = await Promise.all([getJson('./assets/roads/road.json'), getJson('./assets/roads/elements.json'), getJson('./assets/540300.json')]);
+  const elementData = prepareRoadElements(elementSource);
+  const data = attachRoadElements(prepareRoadData(source), elementData), project = roadProjection(data.bounds);
   const demo = data.mode === 'synthetic';
   const routeName = demo ? 'DEMO' : 'G214';
   const root = new THREE.Group(); root.visible = false; scene.add(root);
-  const surface = new THREE.Group(), route = new THREE.Group(), milestones = new THREE.Group(), bridges = new THREE.Group(), anomalies = new THREE.Group();
-  root.add(surface, route, milestones, bridges, anomalies);
-  const groups = {route, milestones, bridges, anomalies};
-  const flags = {route: true, milestones: true, bridges: true, anomalies: true, labels: true};
+  const surface = new THREE.Group(), route = new THREE.Group(), milestones = new THREE.Group(), bridges = new THREE.Group(), anomalies = new THREE.Group(), elements = new THREE.Group();
+  root.add(surface, route, milestones, bridges, anomalies, elements);
+  const groups = {route, milestones, bridges, anomalies, elements};
+  const flags = {route: true, milestones: true, bridges: true, anomalies: true, elements: true, labels: true};
   const projected = new Map(data.records.map(r => { const [x, z] = project(r.coordinates); return [r.id, vector(x, .8, z)]; }));
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  let active = false, selected = data.start, filter = 'all', query = '', playing = false, lastStep = 0, cameraMove = null;
+  let active = false, selected = data.start, selectedElement = elementData.elements[0]?.code || '', filter = 'all', query = '', playing = false, lastStep = 0, cameraMove = null;
   let lastLayout = 0, dragStart = null;
-  const labels = [], pickables = [], animated = [], flowSegments = [];
+  const labels = [], pickables = [], animated = [], flowSegments = [], elementVisuals = [];
   const markerById = new Map();
   const ui = document.createElement('section'); ui.id = 'road-workspace'; ui.hidden = true;
   ui.setAttribute('aria-label', '昌都 G214 公路数据工作台');
@@ -36,7 +38,7 @@ export async function createRoadScene({scene, camera, controls, renderer, notice
       <div><span>起终点 <small>个</small></span><strong>2</strong></div>
       <div><span>桥梁 <small>座</small></span><strong>${data.bridges.length}</strong></div>
     </div>
-    <div class="road-source-status"><i></i> ${demo ? '公开演示 · 虚构线路' : '本机私有数据'} <span>${data.records.length} 条记录</span></div>
+    <div class="road-source-status"><i></i> ${demo ? '公开演示 · 虚构线路' : '本机私有数据'} <span>${data.records.length} 条记录 · ${elementData.elementCount} 项要素</span></div>
     <button class="road-catalog-toggle" aria-expanded="false" aria-controls="road-catalog">资产目录</button>
     <aside id="road-catalog" class="road-catalog road-surface" aria-label="沿线资产目录">
       <div class="road-panel-heading"><h2>沿线资产</h2><span id="road-result-count"></span></div>
@@ -47,14 +49,14 @@ export async function createRoadScene({scene, camera, controls, renderer, notice
     </aside>
     <aside class="road-inspector road-surface" aria-label="选中资产详情"><div class="road-panel-heading"><h2>点位详情</h2><span id="road-detail-type"></span></div><div id="road-detail" aria-live="polite"></div></aside>
     <div class="road-overview road-surface"><div class="road-panel-heading"><h2>昌都市域</h2><span>区域总览</span></div><div id="road-inset"></div><div class="road-inset-caption"><i></i> ${routeName} 数据范围</div></div>
-    <div class="road-map-caption"><span class="road-live-mark"></span> ${routeName} <span>沿线空间分布</span><small>桩点连线示意 · 橙色虚线为待核对连接</small></div>
+    <div class="road-map-caption"><span class="road-live-mark"></span> ${routeName} <span>沿线空间分布</span><small>桩点连线示意 · <b id="road-element-caption">${elementLabel(selectedElement)}</b> 要素已映射</small></div>
     <div class="road-map-controls" aria-label="公路地图视角"><button data-road-action="home" title="查看全线" aria-label="查看全线">⌖</button><button data-road-action="in" aria-label="放大公路地图">＋</button><button data-road-action="out" aria-label="缩小公路地图">−</button><button data-road-action="top" aria-label="公路俯视">俯视</button></div>
-    <div class="road-layers road-surface" aria-label="公路图层"><span>图层</span><button data-road-layer="route" aria-pressed="true">沿线流光</button><button data-road-layer="milestones" aria-pressed="true">里程桩</button><button data-road-layer="bridges" aria-pressed="true">桥梁</button><button data-road-layer="anomalies" aria-pressed="true">待核对</button><button data-road-layer="labels" aria-pressed="true">标注</button></div>
+    <div class="road-layers road-surface" aria-label="公路图层"><label class="road-element-pick"><span>要素</span><select id="road-element-select" aria-label="选择道路要素">${elementData.elements.map(item => `<option value="${escapeHtml(item.code)}">${escapeHtml(item.label)} · ${escapeHtml(item.code)}</option>`).join('')}</select></label><button data-road-layer="elements" aria-pressed="true">要素标记</button><button data-road-layer="route" aria-pressed="true">沿线流光</button><button data-road-layer="milestones" aria-pressed="true">里程桩</button><button data-road-layer="bridges" aria-pressed="true">桥梁</button><button data-road-layer="anomalies" aria-pressed="true">待核对</button><button data-road-layer="labels" aria-pressed="true">标注</button></div>
     <section class="road-timeline road-surface" aria-label="里程巡览">
       <button id="road-play" aria-pressed="false"><span>▶</span> 沿线巡览</button><div class="road-timeline-body"><div class="road-timeline-labels"><span>${data.start.label} <small>起点</small></span><strong id="road-current-chainage">${data.start.label}</strong><span>${data.end.label} <small>终点</small></span></div><div class="road-range-wrap"><div id="road-timeline-marks"></div><input type="range" id="road-range" min="${data.start.chainage}" max="${data.end.chainage}" value="${data.start.chainage}" step="1" aria-label="选择里程桩点"></div><div class="road-timeline-ticks">${Array.from({length:5},(_,i)=>Math.ceil((data.start.chainage+data.spanMetres*i/5)/1000)).map(k => `<span style="left:${(k * 1000 - data.start.chainage) / data.spanMetres * 100}%">K${k}</span>`).join('')}</div></div>
       <button id="road-next" aria-label="下一里程桩">下一桩 →</button>
     </section>
-    <div class="road-data-note">${demo ? '演示线路与资产均为虚构 · 县界使用已有地理数据' : '原表坐标系未注明 · 原始经纬度投影 · 视觉高度不表示高程'}</div>
+    <div class="road-data-note">${demo ? '演示线路与资产均为虚构 · 县界使用已有地理数据' : '原表坐标系未注明 · 原始经纬度投影 · 视觉高度不表示高程'} · 要素时次 ${formatForecastTime(elementSource.fcstTime)}</div>
     <div id="road-labels"></div>`;
   document.body.append(ui);
   const $ = selector => ui.querySelector(selector);
@@ -72,6 +74,11 @@ export async function createRoadScene({scene, camera, controls, renderer, notice
     el.className = 'road-label ' + className; el.textContent = text;
     if (record) { el.setAttribute('aria-label', `定位 ${record.name || record.label}`); el.onclick = () => choose(record, true); }
     $('#road-labels').append(el); labels.push({el, position, record, className});
+  }
+
+  function formatForecastTime(value) {
+    const match = /^(\d{4})(\d{2})(\d{2})(\d{2})/.exec(String(value || ''));
+    return match ? `${match[1]}-${match[2]}-${match[3]} ${match[4]}:00` : '演示时次';
   }
 
   // Full administrative outlines, softly fading into the surrounding space.
@@ -136,6 +143,27 @@ export async function createRoadScene({scene, camera, controls, renderer, notice
     if (special || (isBridge && record.sequence % 5 === 1) || (!isBridge && record.chainage % 20000 === 0) || issue) {
       label(record.name || `${record.label}${record.note ? ' · ' + record.note : ''}`, marker.position.clone().add(vector(0, 1.5, 0)), issue ? 'issue' : special ? 'endpoint' : isBridge ? 'bridge' : '', record);
     }
+    if (!isBridge) {
+      const value = record.elementValues?.[selectedElement];
+      const elementMaterial = new THREE.MeshBasicMaterial({color: value?.levelHexColor || CYAN, transparent: true, opacity: .92, depthWrite: false});
+      const halo = new THREE.Mesh(new THREE.RingGeometry(.28, .36, 20), elementMaterial);
+      halo.rotation.x = -Math.PI / 2; halo.position.copy(p).add(vector(0, .12, 0));
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(.06, .12, .55, 6), elementMaterial.clone());
+      bar.position.copy(p).add(vector(0, .42, 0));
+      elements.add(halo, bar); elementVisuals.push({record, halo, bar});
+    }
+  }
+
+  function refreshElementVisuals() {
+    for (const visual of elementVisuals) {
+      const value = visual.record.elementValues?.[selectedElement];
+      const color = value?.levelHexColor || CYAN;
+      visual.halo.material.color.set(color); visual.bar.material.color.set(color);
+      visual.halo.material.opacity = value ? .8 : .2; visual.bar.material.opacity = value ? .9 : .2;
+      visual.bar.scale.y = value ? 1 : .35;
+    }
+    const current = elementData.elements.find(item => item.code === selectedElement);
+    $('#road-element-caption').textContent = current?.label || selectedElement || '无要素';
   }
 
   const focus = new THREE.Group(); root.add(focus);
@@ -180,16 +208,18 @@ export async function createRoadScene({scene, camera, controls, renderer, notice
 
   function renderDetail() {
     const r = selected, type = r.kind === 'bridge' ? '桥梁' : r.note || '整公里桩';
+    const element = r.elementValues?.[selectedElement];
     $('#road-detail-type').textContent = type;
     $('#road-detail').innerHTML = `<div class="road-detail-kicker">${routeName} <span>${r.issues.length ? '待核对' : demo ? '虚构点位' : '原表点位'}</span></div><h3>${q(r.name || r.label)}</h3><p class="road-detail-sub">${r.kind === 'bridge' ? r.label : q(r.note || '里程碑编码 ' + r.rawChainage)}</p>
       <div class="road-coordinates"><div><span>经度 E</span><strong>${r.coordinates[0]}<small>°</small></strong></div><div><span>纬度 N</span><strong>${r.coordinates[1]}<small>°</small></strong></div></div>
+      <div class="road-element-card"><div><span>当前要素 · ${q(element?.elementLabel || elementLabel(selectedElement))}</span><strong>${element ? `${element.value}${element.unit ? ` ${q(element.unit)}` : ''}` : '暂无数据'}</strong></div>${element ? `<em style="--element-color:${q(element.levelHexColor)}">${q(element.levelDesc)} · 等级 ${q(element.level)}</em>` : ''}</div>
       <dl class="road-detail-fields"><div><dt>${r.kind === 'bridge' ? '中心桩号' : '里程桩号'}</dt><dd>${r.label}${r.issues.some(i => i.type === 'unit') ? ' *' : ''}</dd></div><div><dt>原始编码</dt><dd>${r.rawChainage}</dd></div><div><dt>来源位置</dt><dd>${q(r.source.sheet)} · 第 ${r.source.row} 行</dd></div>${r.neighbours ? `<div><dt>相邻公里桩</dt><dd>${r.neighbours.join('<br>')}</dd></div>` : ''}</dl>
       ${r.issues.length ? `<div class="road-issue-note"><strong>数据待核对</strong>${r.issues.map(i => `<p>${q(i.text)}</p>`).join('')}<small>保持原始点位，未自动修正。</small></div>` : `<div class="road-origin-note">${demo ? '独立生成的演示点位，无真实位置含义' : '按原表经纬度落点'}</div>`}
       <div class="road-detail-actions"><button id="road-focus">定位点位 ↗</button><button id="road-copy" aria-label="复制点位信息">复制信息</button></div>
-      <details class="road-source"><summary>数据来源与口径</summary><p>${q(data.sourceFile)}</p><p>${q(r.source.sheet)}!${q(r.source.range)}</p><p>${q(data.coordinateReferenceSystem)}。${q(data.geometryNote)}。</p><p>待核对规则：相邻桩点直距 &gt; max(2 km, 桩号间距 × 3)；桥梁与同桩号插值位置偏差 &gt; 2 km。仅作数据筛查。</p></details>`;
+      <details class="road-source"><summary>数据来源与口径</summary><p>${q(data.sourceFile)}</p><p>${q(r.source.sheet)}!${q(r.source.range)}</p><p>${q(data.coordinateReferenceSystem)}。${q(data.geometryNote)}。</p><p>要素：${q(element?.element || selectedElement)} · 预报时次 ${q(formatForecastTime(elementSource.fcstTime))}；桩点按道路桩号关联，缺失桩点不插值。</p><p>待核对规则：相邻桩点直距 &gt; max(2 km, 桩号间距 × 3)；桥梁与同桩号插值位置偏差 &gt; 2 km。仅作数据筛查。</p></details>`;
     $('#road-focus').onclick = () => flyTo(r);
     $('#road-copy').onclick = async () => {
-      const text = `${r.name || r.label} · ${r.route} · ${r.label}\n经度 ${r.coordinates[0]} 纬度 ${r.coordinates[1]}\n原值 ${r.rawChainage}\n${data.sourceFile} / ${r.source.sheet}!${r.source.range}${r.issues.length ? '\n' + r.issues.map(i => i.text).join('\n') : ''}`;
+      const text = `${r.name || r.label} · ${r.route} · ${r.label}\n经度 ${r.coordinates[0]} 纬度 ${r.coordinates[1]}\n原值 ${r.rawChainage}\n${element ? `${element.elementLabel}: ${element.value}${element.unit ? ` ${element.unit}` : ''} · ${element.levelDesc}` : '暂无要素数据'}\n${data.sourceFile} / ${r.source.sheet}!${r.source.range}${r.issues.length ? '\n' + r.issues.map(i => i.text).join('\n') : ''}`;
       try { await navigator.clipboard.writeText(text); notice('点位信息已复制'); } catch { notice('复制未成功，请在详情中选取文本'); }
     };
     focus.position.copy(projected.get(r.id));
@@ -223,6 +253,7 @@ export async function createRoadScene({scene, camera, controls, renderer, notice
   function visibleRecord(record) { return record.issues.length ? flags.anomalies : flags[record.kind === 'bridge' ? 'bridges' : 'milestones']; }
   function syncLayers() { for (const [name, group] of Object.entries(groups)) group.visible = flags[name]; ui.querySelectorAll('[data-road-layer]').forEach(b => b.setAttribute('aria-pressed', String(flags[b.dataset.roadLayer]))); }
   $('#road-search').oninput = event => { query = event.target.value; renderList(); };
+  $('#road-element-select').onchange = event => { selectedElement = event.target.value; refreshElementVisuals(); renderDetail(); };
   $('.road-catalog-toggle').onclick = () => { const open = ui.classList.toggle('catalog-open'); $('.road-catalog-toggle').setAttribute('aria-expanded', String(open)); };
   ui.querySelectorAll('[data-road-filter]').forEach(button => button.onclick = () => { filter = button.dataset.roadFilter; renderList(); });
   ui.querySelectorAll('[data-road-layer]').forEach(button => button.onclick = () => { const key = button.dataset.roadLayer; flags[key] = !flags[key]; syncLayers(); });
@@ -251,7 +282,7 @@ export async function createRoadScene({scene, camera, controls, renderer, notice
   renderer.domElement.addEventListener('pointermove', event => { if (active && !event.buttons) renderer.domElement.style.cursor = hit(event) ? 'pointer' : 'grab'; });
   renderer.domElement.addEventListener('wheel', () => { if (active) { cameraMove = null; pause(); } }, {passive: true});
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
-  renderList(); renderDetail(); syncLayers();
+  refreshElementVisuals(); renderList(); renderDetail(); syncLayers();
 
   const screenPoint = new THREE.Vector3();
   function place(el, p) {
