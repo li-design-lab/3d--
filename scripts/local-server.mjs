@@ -6,7 +6,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const mime = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.geojson':'application/geo+json; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.svg':'image/svg+xml','.ico':'image/x-icon','.txt':'text/plain; charset=utf-8','.woff2':'font/woff2'};
-export const requiredFiles = ['index.html','app.js','road-scene.js','road-data.js','road.css','assets/three.module.js','assets/regions/manifest.json','assets/540300.json','assets/roads/road.json'];
+export const requiredFiles = ['index.html','app.js','road-scene.js','road-data.js','road-elements.js','road.css','assets/three.module.js','assets/regions/manifest.json','assets/540300.json','assets/roads/road.json','assets/roads/elements.json'];
 
 export function createLocalServer(root) {
   const started = new Date().toISOString();

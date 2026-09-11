@@ -31,6 +31,6 @@ await fs.writeFile(new URL('release.json',output),JSON.stringify({revision},null
 await fs.writeFile(new URL('.nojekyll',output),'');
 const manifest=JSON.parse(await fs.readFile(new URL('assets/regions/manifest.json',output),'utf8'));
 for(const {file} of Object.values(manifest.views))await fs.access(new URL('assets/'+file,output));
-for(const file of ['app.js','region-data.js','road-scene.js','road-data.js','road.css','assets/roads/road.json','assets/540300.json','assets/three.module.js','assets/radar/cref-202608260054-0212.png'])await fs.access(new URL(file,output));
+for(const file of ['app.js','region-data.js','road-scene.js','road-data.js','road-elements.js','road.css','assets/roads/road.json','assets/roads/elements.json','assets/540300.json','assets/three.module.js','assets/radar/cref-202608260054-0212.png'])await fs.access(new URL(file,output));
 await auditPublic(fileURLToPath(output));
 console.log(`Ready: ${fileURLToPath(output)} (${Object.keys(manifest.views).length} boundary collections)`);

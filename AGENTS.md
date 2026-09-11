@@ -19,4 +19,4 @@
 - 开发服务使用 5176，避免占用日常预览的 5174。桌面入口是 `打开蓝色3D地图.command`，会检查/恢复本机服务后打开 Chrome。
 
 ## 公路数据隐私
-原始公路数据仅限本机。`.private/`、原始表格、原坐标衍生线路、浏览器证据不得提交或发布。公开目录只能使用 `scripts/generate-road-demo.mjs` 独立生成的演示数据。发布前执行 `scripts/audit-public.mjs`；不可将本机安装副本用于发布。
+原始公路数据仅限本机。`.private/`、原始表格、原坐标衍生线路、道路要素接口原始 JSON、浏览器证据不得提交或发布。公开目录只能使用 `scripts/generate-road-demo.mjs` 独立生成的演示道路和要素。发布前执行 `scripts/audit-public.mjs`；不可将本机安装副本用于发布。

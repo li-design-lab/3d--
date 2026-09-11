@@ -1,14 +1,16 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
+import {makeDemo, makeDemoElements} from './generate-road-demo.mjs';
 import {fileURLToPath} from 'node:url';
-import {makeDemo} from './generate-road-demo.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 export async function auditPublic(directory) {
   const payload=JSON.parse(await fs.readFile(path.join(directory,'assets/roads/road.json'),'utf8'));
+  const elementPayload=JSON.parse(await fs.readFile(path.join(directory,'assets/roads/elements.json'),'utf8'));
   if(JSON.stringify(payload)!==JSON.stringify(makeDemo()))throw Error('Public road payload must exactly match the independent demo generator');
+  if(JSON.stringify(elementPayload)!==JSON.stringify(makeDemoElements(payload)))throw Error('Public element payload must exactly match the independent demo generator');
   const roads=await fs.readdir(path.join(directory,'assets/roads'));
-  if(roads.length!==1||roads[0]!=='road.json')throw Error('Unexpected road file in public assets');
+  if(roads.length!==2||!roads.includes('road.json')||!roads.includes('elements.json'))throw Error('Unexpected road file in public assets');
   const files=(await fs.readdir(directory,{recursive:true,withFileTypes:true})).filter(f=>f.isFile()).map(f=>path.join(f.parentPath,f.name));
   await auditFiles(files);
   return files.length;

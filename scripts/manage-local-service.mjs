@@ -46,17 +46,22 @@ async function install() {
   const files = (await fs.readdir(source,{recursive:true,withFileTypes:true})).filter(item => item.isFile()).map(item => path.relative(source,path.join(item.parentPath,item.name))).sort();
   const hash = createHash('sha256');
   for (const file of files) { hash.update(file); hash.update(await fs.readFile(path.join(source,file))); }
-  const privateFile = path.resolve(scriptDir, '../.private/road.json');
-  let privateData;
-  try { privateData = await fs.readFile(privateFile); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-  if (privateData) hash.update(privateData);
+  const privateFiles = [
+    ['.private/road.json', 'assets/roads/road.json'],
+    ['.private/road-elements.json', 'assets/roads/elements.json'],
+  ];
+  const privateData = [];
+  for (const [sourceFile, targetFile] of privateFiles) {
+    try { const content = await fs.readFile(path.resolve(scriptDir, '..', sourceFile)); privateData.push({targetFile, content}); hash.update(sourceFile); hash.update(content); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
   const revision = hash.digest('hex');
   const release = path.join(installDir,'releases',revision);
   try { await fs.access(path.join(release,'local-release.json')); }
   catch {
     const staging = release + '.tmp-' + process.pid;
     await fs.cp(source,staging,{recursive:true});
-    if (privateData) await fs.writeFile(path.join(staging,'assets/roads/road.json'),privateData);
+    for (const {targetFile, content} of privateData) await fs.writeFile(path.join(staging, targetFile), content);
     await fs.writeFile(path.join(staging,'local-release.json'),JSON.stringify({revision,installedAt:new Date().toISOString()},null,2));
     await fs.rename(staging,release);
   }
