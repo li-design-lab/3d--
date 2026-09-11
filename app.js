@@ -1,13 +1,14 @@
 import * as THREE from 'three';
-import {OrbitControls} from './assets/OrbitControls.js';
-import {EffectComposer} from './assets/postprocessing/EffectComposer.js';
-import {RenderPass} from './assets/postprocessing/RenderPass.js';
-import {UnrealBloomPass} from './assets/postprocessing/UnrealBloomPass.js';
-import {OutputPass} from './assets/postprocessing/OutputPass.js';
-import {createGlobeShell} from './globe-shell.js';
-import {createRegionStore, readJson} from './region-data.js';
+import {OrbitControls} from './assets/OrbitControls.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
+import {EffectComposer} from './assets/postprocessing/EffectComposer.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
+import {RenderPass} from './assets/postprocessing/RenderPass.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
+import {UnrealBloomPass} from './assets/postprocessing/UnrealBloomPass.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
+import {OutputPass} from './assets/postprocessing/OutputPass.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
+import {createGlobeShell} from './globe-shell.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
+import {createRegionStore, readJson} from './region-data.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
+import {createRoadScene} from './road-scene.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
 const $=s=>document.querySelector(s),TAU=Math.PI*2;
-let regionStore=null, activeData=null;
+let regionStore=null, activeData=null, roadScene=null;
 const state={view:'china',radar:true,fly:true,event:true,point:true,heat:false,scatter:true,aura:true,code:'100000',name:'中国',history:[],busy:false};
 const root=$('#scene'), labelRoot=$('#labels');
 let renderer;
@@ -103,10 +104,11 @@ applyLayers();}
 function applyLayers(){const groups=state.view==='earth'?globeLayers:layerGroups;for(const [k,objects] of Object.entries(groups))objects.forEach(o=>o.visible=state[k]);document.querySelectorAll('[data-layer]').forEach(b=>{const active=state[b.dataset.layer];b.classList.toggle('active',active);b.setAttribute('aria-pressed',active);b.disabled=switching;});if(activeData)renderNavigation();}
 async function getData(code){return regionStore.get(code);}
 function tweenCamera(pos,duration=1100,done=null){cameraTween={from:camera.position.clone(),to:pos,start:performance.now(),duration,done};}
-function home(){controls.target.set(state.view==='china'?2:0,state.view==='china'?-6:0,0);tweenCamera((state.view==='earth'?v(0,20,150):v(0,89,112)).multiplyScalar(Math.max(1,1.45/camera.aspect)));controls.autoRotate=false;$('#orbit').classList.remove('active');$('#orbit').setAttribute('aria-pressed','false');}
+function home(){if(state.view==='road'){cameraTween=null;roadScene.home();return;}controls.target.set(state.view==='china'?2:0,state.view==='china'?-6:0,0);tweenCamera((state.view==='earth'?v(0,20,150):v(0,89,112)).multiplyScalar(Math.max(1,1.45/camera.aspect)));controls.autoRotate=false;$('#orbit').classList.remove('active');$('#orbit').setAttribute('aria-pressed','false');}
 async function drill(feature){
   if(state.busy||switching)return;
   const props=feature.properties,code=String(props.adcode);
+  if(code===state.code && code==='540302'){await switchView('road');return;}
   if(code===state.code){notice(props.level==='town'?'已到乡镇层级':'该区域暂缺下级边界数据');return;}
   const previous={code:state.code,name:state.name,data:activeData,detail:state.detail};
   state.busy=true;renderNavigation();notice('正在进入'+props.name);
@@ -136,11 +138,12 @@ function renderNavigation(){
   const current=document.createElement('strong');current.textContent=state.name;crumbs.append(current);
   const select=$('#region-select');select.replaceChildren(new Option('选择区域进入…',''));
   for(const f of activeData?.features||[]){if(String(f.properties.adcode)===state.code)continue;select.add(new Option(f.properties.name,String(f.properties.adcode)));}
+  if(state.code==='540302')select.add(new Option('公路资产 → 桩点与桥梁','road'));
   select.disabled=state.busy||switching||select.options.length===1;
-  $('#region-status').textContent=state.busy?'正在加载边界…':state.detail?(activeData.features[0].properties.level==='town'?'已到乡镇层级':activeData.features[0].properties.level==='district'?'当前区县 · 暂缺乡镇边界':'当前区域 · 暂缺下级边界'):state.code==='100000'?'34 个省级区域 · 使用提供的省界':activeData.features.length+' 个下级区域 · 点击地图或选择区域';
+  $('#region-status').textContent=state.code==='540302'?'点击区县或选择公路资产继续下钻 · 业务图层':state.busy?'正在加载边界…':state.detail?(activeData.features[0].properties.level==='town'?'已到乡镇层级':activeData.features[0].properties.level==='district'?'当前区县 · 暂缺乡镇边界':'当前区域 · 暂缺下级边界'):state.code==='100000'?'34 个省级区域 · 使用提供的省界':activeData.features.length+' 个下级区域 · 点击地图或选择区域';
   $('.radar-panel').hidden=state.view!=='china'||!state.radar;
 }
-$('#region-select').onchange=e=>{const f=activeData.features.find(f=>String(f.properties.adcode)===e.target.value);if(f)drill(f);};
+$('#region-select').onchange=e=>{if(e.target.value==='road'){switchView('road');return;}const f=activeData.features.find(f=>String(f.properties.adcode)===e.target.value);if(f)drill(f);};
 
 function makeGlobe(){const loader=new THREE.TextureLoader();const texture=loader.load('./assets/earth.jpg');texture.colorSpace=THREE.SRGBColorSpace;const normal=loader.load('./assets/bump.jpg');const sphere=new THREE.Mesh(new THREE.SphereGeometry(30,128,80),new THREE.MeshPhongMaterial({map:texture,color:'#a7c8ed',normalMap:normal,normalScale:new THREE.Vector2(.22,.22),shininess:20,specular:new THREE.Color('#366ea9')}));earth.add(sphere);
 const cloudTex=loader.load('./assets/clouds.png');const cloud=new THREE.Mesh(new THREE.SphereGeometry(30.24,96,64),new THREE.MeshPhongMaterial({map:cloudTex,transparent:true,opacity:.48,depthWrite:false,blending:THREE.AdditiveBlending}));earth.add(cloud);earth.userData.cloud=cloud;
@@ -158,9 +161,33 @@ if(index%2){const sea=new THREE.Points(new THREE.BufferGeometry().setFromPoints(
 earth.userData.shell=createGlobeShell(globeWorld);globeLayers.aura.push(earth.userData.shell.group);
 earth.rotation.y=2.73;earth.rotation.z=-.12;
 const starGeo=new THREE.BufferGeometry(),stars=[];for(let i=0;i<1900;i++){const p=v(random()-.5,random()-.5,random()-.5).normalize().multiplyScalar(280+random()*240);stars.push(p.x,p.y,p.z);}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(stars,3));globeWorld.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:'#c3dbef',size:.42,transparent:true,opacity:.6})));}
-function activateView(mode){state.view=mode;if(mode==='earth')earth.userData.shell.reset(performance.now()/1000);mapWorld.visible=mode==='china';globeWorld.visible=mode==='earth';scene.fog.density=mode==='earth'?.0002:.0028;renderer.setClearColor(mode==='earth'?'#000104':'#020b12');bloom.strength=mode==='earth'?.7:.55;document.querySelectorAll('[data-view]').forEach(b=>{b.classList.toggle('selected',b.dataset.view===mode);b.setAttribute('aria-pressed',b.dataset.view===mode);});$('.tabs').dataset.active=mode;$('#back').hidden=mode==='earth'||!state.history.length;$('#tooltip').hidden=true;updateToolbar();applyLayers();}
+function activateView(mode){state.view=mode;document.querySelector("#road-entry").hidden=mode==="earth";roadScene?.setActive(mode==='road');if(mode==='earth')earth.userData.shell.reset(performance.now()/1000);mapWorld.visible=mode==='china';globeWorld.visible=mode==='earth';scene.fog.density=mode==='earth'?.0002:mode==='road'?.0014:.0028;renderer.setClearColor(mode==='earth'?'#000104':mode==='road'?'#01040a':'#020b12');bloom.strength=mode==='earth'?.7:mode==='road'?.48:.55;document.querySelectorAll('[data-view]').forEach(b=>{b.classList.toggle('selected',b.dataset.view===mode);b.setAttribute('aria-pressed',b.dataset.view===mode);});$('.tabs').dataset.active=mode;$('#back').hidden=mode!=='china'||!state.history.length;$('#tooltip').hidden=true;updateToolbar();applyLayers();}
 let switching=false;
-function switchView(mode){if(mode===state.view||switching||state.busy)return;switching=true;document.querySelectorAll('button').forEach(b=>b.disabled=true);controls.enabled=false;controls.autoRotate=false;$('#orbit').classList.remove('active');$('#orbit').setAttribute('aria-pressed','false');$('#transition').style.opacity='1';
+async function roadContext(){
+  if(state.code==='540302')return;
+  const [national,tibet,changdu]=await Promise.all([getData('100000'),getData('540000'),getData('540300')]);
+  const district=changdu.features.find(f=>String(f.properties.adcode)==='540302');
+  if(!district)throw Error('缺少卡若区边界');
+  state.history=[{code:'100000',name:'中国',data:national,detail:false},{code:'540000',name:'西藏自治区',data:tibet,detail:false},{code:'540300',name:'昌都市',data:changdu,detail:false}];
+  state.code='540302';state.name='卡若区';state.detail=true;
+  buildMap({type:'FeatureCollection',features:[district]});
+}
+async function leaveRoad(code){
+  if(switching||state.busy)return;
+  await switchView('china');
+  if(state.view!=='china')return;
+  const index=state.history.findIndex(item=>item.code===code);
+  if(index>=0)returnTo(index);
+}
+async function switchView(mode){if(mode===state.view||switching||state.busy)return;switching=true;
+if(mode==='road'||state.view==='road'){
+  document.querySelectorAll('[data-view]').forEach(b=>b.disabled=true);
+  try{if(mode==='road'&&!roadScene){notice('正在载入 G214 里程与桥梁数据…');roadScene=await createRoadScene({scene,camera,controls,renderer,notice,onNavigate:leaveRoad});}if(mode==='road')await roadContext();cameraTween=null;activateView(mode);home();$('#notice').style.opacity=0;const url=new URL(location.href);if(mode==='road')url.searchParams.set('scene','g214');else url.searchParams.delete('scene');history.replaceState(null,'',url);}
+  catch(error){notice('G214 数据加载失败，点击入口可重试');console.error(error);}
+  finally{switching=false;document.querySelectorAll('[data-view]').forEach(b=>b.disabled=false);controls.enabled=true;applyLayers();}
+  return;
+}
+document.querySelectorAll('button').forEach(b=>b.disabled=true);controls.enabled=false;controls.autoRotate=false;$('#orbit').classList.remove('active');$('#orbit').setAttribute('aria-pressed','false');$('#transition').style.opacity='1';
 const outward=mode==='earth'?camera.position.clone().normalize().multiplyScalar(205):camera.position.clone().normalize().multiplyScalar(48);
 tweenCamera(outward,850,()=>{activateView(mode);controls.target.set(mode==='china'?2:0,mode==='china'?-6:0,0);const fit=Math.max(1,1.45/camera.aspect);camera.position.copy((mode==='earth'?v(0,9,63):v(0,149,189)).multiplyScalar(fit));$('#transition').style.opacity='0';const destination=(mode==='earth'?v(0,20,150):v(0,89,112)).multiplyScalar(fit);tweenCamera(destination,1650,()=>{switching=false;document.querySelectorAll('button').forEach(b=>b.disabled=false);controls.enabled=true;renderNavigation();});});}
 function updateToolbar(){$('.hint').textContent=state.view==='earth'?'拖动旋转 · 滚轮缩放':'拖动旋转 · 滚轮缩放 · 点击区域下钻';const mapNames={radar:'雷达回波',fly:'柱子飞线',event:'事件标签',point:'重点点位',heat:'模拟热力',scatter:'地图散点',aura:'粒子光环'},earthNames={radar:'雷达回波',fly:'飞线',event:'标签',point:'柱状图',heat:'陆运线',scatter:'海航线',aura:'粒子光环'};document.querySelectorAll('[data-layer]').forEach(b=>{b.querySelector('.control-label').textContent=(state.view==='earth'?earthNames:mapNames)[b.dataset.layer];b.hidden=(b.dataset.layer==='aura'&&state.view==='china')||(b.dataset.layer==='radar'&&state.view==='earth');});}
@@ -169,13 +196,14 @@ $('#in').onclick=()=>tweenCamera(camera.position.clone().multiplyScalar(.82),400
 function pointerHit(e){const r=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);raycaster.setFromCamera(pointer,camera);return raycaster.intersectObjects(pickables,false)[0]?.object;}
 let down=null;renderer.domElement.addEventListener('pointerdown',e=>{if(switching)return;down=[e.clientX,e.clientY];cameraTween=null;});renderer.domElement.addEventListener('pointermove',e=>{if(state.view!=='china'||e.buttons)return;const hit=pointerHit(e);if(hovered&&hovered!==hit){hovered.userData.top.uniforms.highlight.value=0;}hovered=hit;const tooltip=$('#tooltip');if(hit){hit.userData.top.uniforms.highlight.value=1;tooltip.hidden=false;tooltip.replaceChildren();const name=document.createElement('span');name.textContent=hit.userData.feature.properties.name;const help=document.createElement('small');help.textContent='点击查看下级区域';tooltip.append(name,help);tooltip.style.left=Math.min(e.clientX+18,innerWidth-180)+'px';tooltip.style.top=Math.min(e.clientY+16,innerHeight-80)+'px';renderer.domElement.style.cursor='pointer';}else{tooltip.hidden=true;renderer.domElement.style.cursor='grab';}});
 renderer.domElement.addEventListener('pointerup',e=>{if(state.view!=='china'||!down)return;if(Math.hypot(e.clientX-down[0],e.clientY-down[1])<5){const hit=pointerHit(e);if(hit)drill(hit.userData.feature);}down=null;});renderer.domElement.addEventListener('pointerleave',()=>{$('#tooltip').hidden=true;if(hovered)hovered.userData.top.uniforms.highlight.value=0;hovered=null;});renderer.domElement.addEventListener('wheel',()=>{if(!switching)cameraTween=null;},{passive:true});
-addEventListener('resize',()=>{const oldFit=Math.max(1,1.45/camera.aspect);camera.aspect=innerWidth/innerHeight;const fit=Math.max(1,1.45/camera.aspect);camera.position.multiplyScalar(fit/oldFit);controls.maxDistance=240*fit;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);});
+addEventListener('resize',()=>{const oldFit=Math.max(1,1.45/camera.aspect);camera.aspect=innerWidth/innerHeight;const fit=Math.max(1,1.45/camera.aspect);camera.position.multiplyScalar(fit/oldFit);controls.maxDistance=240*fit;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);roadScene?.resize();});
 function updateLabels(list,visible){for(const l of list){let show=visible&&(!l.layer||state[l.layer]);if(show){temp.copy(l.pos);l.parent.localToWorld(temp);if(l.surface){const center=l.parent.getWorldPosition(new THREE.Vector3());show=temp.clone().sub(center).dot(camera.position.clone().sub(temp))>0;}temp.project(camera);show=show&&temp.z<1&&Math.abs(temp.x)<1.2&&Math.abs(temp.y)<1.2;if(show){l.el.style.left=(temp.x*.5+.5)*innerWidth+'px';l.el.style.top=(-temp.y*.5+.5)*innerHeight+'px';}}
 l.el.style.display=show?'block':'none';}}
-const clock=new THREE.Clock();function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime(),now=performance.now();if(cameraTween){const a=Math.min(1,(now-cameraTween.start)/cameraTween.duration),e=1-Math.pow(1-a,3);camera.position.lerpVectors(cameraTween.from,cameraTween.to,e);if(a===1){const done=cameraTween.done;cameraTween=null;done?.();}}controls.update();rings.forEach((g,i)=>g.rotation.y=t*(i%2?-.035:.06));particles.rotation.y=t*.005;streaks.forEach((l,i)=>l.material.opacity=.08+.22*(.5+.5*Math.sin(t*.8+i)));timeMats.forEach(m=>m.uniforms.t.value=t);pulses.forEach((r,i)=>{const phase=(t*.5+r.userData.phase)%1;r.scale.setScalar(.6+phase*1.5);r.material.opacity=(1-phase)*.75;});animatedObjects.forEach(({object,y,phase,rotate})=>{if(rotate)object.rotation.y=t*.22;else{object.position.y=y+Math.sin(t*1.7+phase)*.3;object.rotation.y=t*.35;}});flyDots.forEach(({dot,curve,offset})=>dot.position.copy(curve.getPoint((t*.17+offset)%1)));if(globeWorld.visible){earth.rotation.y+=.0002;earth.userData.cloud.rotation.y+=.00016;earth.userData.shell.update(now/1000);earth.userData.travellers.forEach(({object,curve,phase})=>object.position.copy(curve.getPoint((t*.07+phase)%1)));}const reveal=Math.min(1,(now-transitionStart)/900);land.scale.y=.12+.88*(1-Math.pow(1-reveal,3));updateLabels(mapLabels,mapWorld.visible);updateLabels(earthLabels,globeWorld.visible);composer.render();}
+const clock=new THREE.Clock();function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime(),now=performance.now();if(cameraTween){const a=Math.min(1,(now-cameraTween.start)/cameraTween.duration),e=1-Math.pow(1-a,3);camera.position.lerpVectors(cameraTween.from,cameraTween.to,e);if(a===1){const done=cameraTween.done;cameraTween=null;done?.();}}controls.update();rings.forEach((g,i)=>g.rotation.y=t*(i%2?-.035:.06));particles.rotation.y=t*.005;streaks.forEach((l,i)=>l.material.opacity=.08+.22*(.5+.5*Math.sin(t*.8+i)));timeMats.forEach(m=>m.uniforms.t.value=t);pulses.forEach((r,i)=>{const phase=(t*.5+r.userData.phase)%1;r.scale.setScalar(.6+phase*1.5);r.material.opacity=(1-phase)*.75;});animatedObjects.forEach(({object,y,phase,rotate})=>{if(rotate)object.rotation.y=t*.22;else{object.position.y=y+Math.sin(t*1.7+phase)*.3;object.rotation.y=t*.35;}});flyDots.forEach(({dot,curve,offset})=>dot.position.copy(curve.getPoint((t*.17+offset)%1)));if(globeWorld.visible){earth.rotation.y+=.0002;earth.userData.cloud.rotation.y+=.00016;earth.userData.shell.update(now/1000);earth.userData.travellers.forEach(({object,curve,phase})=>object.position.copy(curve.getPoint((t*.07+phase)%1)));}const reveal=Math.min(1,(now-transitionStart)/900);land.scale.y=.12+.88*(1-Math.pow(1-reveal,3));updateLabels(mapLabels,mapWorld.visible);updateLabels(earthLabels,globeWorld.visible);roadScene?.update(t,now);composer.render();}
 $('#retry').onclick=()=>location.reload();
 try{
   regionStore=createRegionStore(await readJson('./assets/regions/manifest.json'));
   const data=await getData('100000');chinaData=data;buildMap(data);makeGlobe();updateToolbar();animate();
+  if(new URLSearchParams(location.search).get("scene")==="g214")await switchView("road");
   $('#loading').style.opacity=0;setTimeout(()=>$('#loading').remove(),650);
 }catch(e){$('#loading span').textContent='地图加载失败，请重新加载';$('#loading .loader').style.display='none';$('#retry').hidden=false;console.error(e);}

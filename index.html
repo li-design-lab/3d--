@@ -1,12 +1,14 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
+<link rel="icon" href="data:,">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>数字地图 · 3D交互场景</title>
-  <meta name="description" content="蓝色立体中国地图，支持真实雷达反射率、区域下钻、热力与飞线图层、地球视图和自由视角。">
-  <link rel="stylesheet" href="style.css?v=0c67d4a7226c0702934177892673434de3b1004e">
-  <link rel="stylesheet" href="regions.css?v=0c67d4a7226c0702934177892673434de3b1004e">
+  <title>蓝色 3D 地图 · 公路资产</title>
+  <meta name="description" content="蓝色立体地图，支持昌都 G214 卡若段真实里程桩与桥梁数据、雷达反射率、行政区下钻、地球视图和自由视角。">
+  <link rel="stylesheet" href="style.css?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46">
+  <link rel="stylesheet" href="regions.css?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46">
+  <link rel="stylesheet" href="road.css?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46">
   <script type="importmap">{"imports":{"three":"./assets/three.module.js"}}</script>
 </head>
 <body>
@@ -18,8 +20,9 @@
     <nav id="region-crumbs" aria-label="当前位置"></nav>
     <select id="region-select" aria-label="选择下钻区域"></select>
     <p id="region-status" role="status"></p>
-    <small id="release-label">下钻版 · 0c67d4a</small>
+    <small id="release-label">下钻版 · 2e30075</small>
   </section>
+  <button id="road-entry" data-view="road" aria-pressed="false"><strong>公路</strong><span>昌都 · 公路资产</span><span>↗</span></button>
 
   <div class="tools left" aria-label="数据图层">
     <div class="tools-caption">图层显示</div>
@@ -45,6 +48,7 @@
   <nav class="tabs" data-active="china" aria-label="场景切换">
     <button data-view="earth" aria-pressed="false"><svg class="control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg><span>全球</span></button>
     <button data-view="china" class="selected" aria-pressed="true"><svg class="control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 7 6-3 6 3 6-3v13l-6 3-6-3-6 3zM9 4v13m6-10v13"/></svg><span>中国</span></button>
+    <button data-view="road" aria-pressed="false"><svg class="control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m7 3-3 18M17 3l3 18M12 3v4m0 3v4m0 3v4"/></svg><span>公路</span></button>
   </nav>
   <aside class="radar-panel" aria-label="雷达产品信息">
     <div class="radar-head"><span class="radar-dot"></span><span>雷达拼图 · 实况</span></div>
@@ -59,6 +63,6 @@
   <button id="fullscreen" title="全屏" aria-label="全屏"><svg class="control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></svg></button>
   <div id="loading"><div class="loader"></div><span>正在构建立体地图</span><button id="retry" hidden>重新加载</button></div>
   <div id="notice" role="status"></div>
-  <script type="module" src="app.js?v=0c67d4a7226c0702934177892673434de3b1004e"></script>
+  <script type="module" src="app.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46"></script>
 </body>
 </html>
