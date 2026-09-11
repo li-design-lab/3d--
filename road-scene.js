@@ -1,16 +1,13 @@
+import {readJson} from './region-data.js?v=4e26be6f9bfc05ad96277602e1c84d3efe21c59c';
 import * as THREE from 'three';
-import {prepareRoadData, roadProjection, chainageLabel, mercator} from './road-data.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
+import {prepareRoadData, roadProjection, chainageLabel, mercator} from './road-data.js?v=4e26be6f9bfc05ad96277602e1c84d3efe21c59c';
 
 const CYAN = '#65e7ff', GOLD = '#ffbd68', ICE = '#d3f7ff';
 const vector = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 export async function createRoadScene({scene, camera, controls, renderer, notice, onNavigate}) {
-  const getJson = async path => {
-    const response = await fetch(path, {signal: AbortSignal.timeout(10000)});
-    if (!response.ok) throw Error(`G214 数据加载失败 (${response.status})`);
-    return response.json();
-  };
+  const getJson = readJson;
   const [source, boundary] = await Promise.all([getJson('./assets/roads/road.json'), getJson('./assets/540300.json')]);
   const data = prepareRoadData(source), project = roadProjection(data.bounds);
   const demo = data.mode === 'synthetic';

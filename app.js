@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import {OrbitControls} from './assets/OrbitControls.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
-import {EffectComposer} from './assets/postprocessing/EffectComposer.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
-import {RenderPass} from './assets/postprocessing/RenderPass.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
-import {UnrealBloomPass} from './assets/postprocessing/UnrealBloomPass.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
-import {OutputPass} from './assets/postprocessing/OutputPass.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
-import {createGlobeShell} from './globe-shell.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
-import {createRegionStore, readJson} from './region-data.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
-import {createRoadScene} from './road-scene.js?v=2e30075758a860b073aa7edd3e5ef5d5e496ef46';
+import {OrbitControls} from './assets/OrbitControls.js?v=4e26be6f9bfc05ad96277602e1c84d3efe21c59c';
+import {EffectComposer} from './assets/postprocessing/EffectComposer.js?v=4e26be6f9bfc05ad96277602e1c84d3efe21c59c';
+import {RenderPass} from './assets/postprocessing/RenderPass.js?v=4e26be6f9bfc05ad96277602e1c84d3efe21c59c';
+import {UnrealBloomPass} from './assets/postprocessing/UnrealBloomPass.js?v=4e26be6f9bfc05ad96277602e1c84d3efe21c59c';
+import {OutputPass} from './assets/postprocessing/OutputPass.js?v=4e26be6f9bfc05ad96277602e1c84d3efe21c59c';
+import {createGlobeShell} from './globe-shell.js?v=4e26be6f9bfc05ad96277602e1c84d3efe21c59c';
+import {createRegionStore, readJson} from './region-data.js?v=4e26be6f9bfc05ad96277602e1c84d3efe21c59c';
+import {createRoadScene} from './road-scene.js?v=4e26be6f9bfc05ad96277602e1c84d3efe21c59c';
 const $=s=>document.querySelector(s),TAU=Math.PI*2;
 let regionStore=null, activeData=null, roadScene=null;
 const state={view:'china',radar:true,fly:true,event:true,point:true,heat:false,scatter:true,aura:true,code:'100000',name:'中国',history:[],busy:false};
@@ -206,4 +206,4 @@ try{
   const data=await getData('100000');chinaData=data;buildMap(data);makeGlobe();updateToolbar();animate();
   if(new URLSearchParams(location.search).get("scene")==="g214")await switchView("road");
   $('#loading').style.opacity=0;setTimeout(()=>$('#loading').remove(),650);
-}catch(e){$('#loading span').textContent='地图加载失败，请重新加载';$('#loading .loader').style.display='none';$('#retry').hidden=false;console.error(e);}
+}catch(e){$('#loading span').textContent='地图暂未加载成功：'+(e.message||'请检查网络后重试');$('#loading .loader').style.display='none';$('#retry').hidden=false;console.error(e);}
